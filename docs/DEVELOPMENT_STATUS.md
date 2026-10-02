@@ -19,8 +19,8 @@
 | GitHub network | **PASS** | `git ls-remote` reaches GitHub |
 | GitHub account | **PASS** | `quyenbe0402` confirmed via API |
 | Push authentication | **PASS** | verified by dry run, nothing transferred |
-| Git remote `origin` | **PASS** | `vit-ngan-harness` connected, `ls-remote` exit 0 |
-| Push to `origin` | **BLOCKED** | 403 — token not scoped to this repo |
+| Git remote `origin` | **PASS** | `vit-ngan-harness` live, fetch+push working |
+| Push to `origin` | **PASS** | `main` and `develop` pushed, tracking set |
 | Branch model | **PASS** | main / develop / claude/* / cline/* |
 | PowerShell scripts | **PASS** | 18 scripts, all parse, guards verified |
 | Android SDK | **PASS** | platforms 36/36.1/37.0, build-tools 36.0.0 |
@@ -50,85 +50,66 @@ development. Full detail: `docs/DEVELOPMENT_ENVIRONMENT_BASELINE.md`.
 | History | 4 commits, linear with merges |
 | Tracked files | 39 + this finalization's additions |
 
-## 3. GitHub status — **REMOTE CONNECTED, PUSH BLOCKED**
+## 3. GitHub status — **CONNECTED AND PUSHING**
 
 | Field | Value |
 |-------|-------|
-| `origin` (fetch) | `https://github.com/quyenbe0402/vit-ngan-harness.git` |
-| `origin` (push) | `https://github.com/quyenbe0402/vit-ngan-harness.git` |
-| Remote repository | **EXISTS** — public, 0 KB, default branch `main` |
-| `git ls-remote origin` | exit 0, **0 refs** (repo is empty) |
-| Network reachability | **PASS** |
-| Account | `quyenbe0402` — confirmed via API |
-| `GITHUB_TOKEN` | present, authenticates as `quyenbe0402` |
-| Token type | **fine-grained** |
-| **Push to `origin`** | **403 DENIED** — see §3.2 |
-| Push to `game-ngoc-rong-offline` | works (proves the credential path itself is valid) |
+| `origin` (fetch + push) | `https://github.com/quyenbe0402/vit-ngan-harness.git` |
+| Remote repository | **live**, public |
+| Branches pushed | `main` → `origin/main`, `develop` → `origin/develop` |
+| Tracking configured | ✅ both branches |
+| `git fetch origin` | exit 0 |
+| Working tree | clean, up to date with `origin/develop` |
+| Account | `quyenbe0402` |
+| Token | fine-grained, scoped to `vit-ngan-harness` |
 
-### 3.1 What is done
-
-`origin` is configured and reachable. `git ls-remote origin` succeeds and
-correctly reports the remote as empty, so the first push will establish
-`main` as the default branch with no conflict.
-
-### 3.2 Why the push is denied — fine-grained token scope
+### 3.1 Verified pushed state
 
 ```
-remote: Permission to quyenbe0402/vit-ngan-harness.git denied to quyenbe0402.
-fatal: ... The requested URL returned error: 403
+$ git ls-remote --heads origin
+69fcb4600b9ffac7ec560e526089f68c692070e1  refs/heads/develop
+cbecfa3dc349c7654feab4239ea431c3b6fd2ae4  refs/heads/main
+
+$ git branch -vv
+  develop  69fcb46 [origin/develop] chore(M0-002): connect origin...
+  main     cbecfa3 [origin/main]    merge(M0-001): develop into main
 ```
 
-This is **not** a network, URL, or branch problem. The evidence:
+Remote `main` contains all 9 top-level entries: `.gitattributes`,
+`.github`, `.gitignore`, `DEVELOPMENT_STATUS.md`,
+`Hermes_Android_Agent_PROJECT_PLAN.md`, `README.md`, `docs`, `handoff`,
+`scripts`. SHA values match the local branches exactly.
 
-| Test | Result |
-|------|--------|
-| `git ls-remote origin` | exit 0 — network and URL are correct |
-| API read of `vit-ngan-harness` | OK, `permissions.push = true` |
-| Dry-run push to `vit-ngan-harness` | **403** |
-| Dry-run push to `game-ngoc-rong-offline` | **exit 0 — succeeds** |
+### 3.2 Two token permissions were required
 
-The same token pushes successfully to the older repository but is refused
-by the new one. That isolates the cause to the token's **repository
-selection**: the fine-grained token was granted access to
-`game-ngoc-rong-offline` only, and `vit-ngan-harness` was never added to it.
+Getting this working took two permission additions, both discovered by
+failing and measuring rather than guessing:
 
-The API's `permissions.push = true` describes the *account's* rights on the
-repository, not what this particular token is scoped to. Those are different
-things, which is why the API looked permissive while the push was refused.
+| Permission | Why | Symptom when missing |
+|------------|-----|----------------------|
+| `Contents: Read and write` | Push repository content | `403 Permission denied` |
+| `Workflows: Read and write` | Push `.github/workflows/*` | `refusing to allow a PAT to create or update workflow ... without workflow scope` |
 
-### 3.3 Owner action — fix the token scope
+The second is easy to miss: GitHub treats files under `.github/workflows/`
+as **executable code** and gates them behind a separate scope from
+`Contents`. A token with full `Contents` access still cannot push CI files.
 
-1. Open https://github.com/settings/personal-access-tokens
-2. Edit the token currently exported as `GITHUB_TOKEN`
-3. Under **Repository access**, add `vit-ngan-harness`
-4. Confirm **Permissions → Repository contents: Read and write**
-5. Save — the token value stays the same, so `$env:GITHUB_TOKEN` does not
-   need to be replaced unless the token was regenerated
+### 3.3 Credential handling note
 
-Then re-run, in the same PowerShell session:
+The token is supplied via the shell environment and passed to git per
+invocation. It is **never** written to:
 
-```powershell
-.\scripts\git-fetch-all.ps1
-git push -u origin main
-git push -u origin develop
-git branch -vv
-```
+- `.git/config` (verified — `git remote -v` shows the clean HTTPS URL)
+- any tracked file
+- any script in this repository
 
-If the token value was regenerated, re-export it before pushing:
+Pushes use `git -c credential.helper=` so the machine's default credential
+helper is bypassed for those commands, avoiding accidental caching.
 
-```powershell
-$env:GITHUB_TOKEN = '<new value>'
-```
-
-**Never commit the token and never paste it into a file in this repository.**
-
-### 3.4 Note on the branch divergence
-
-`main` and `develop` have diverged: `develop` is **2 commits ahead**,
-`main` is **1 commit ahead** (a merge commit from the earlier setup). This
-is normal after the setup merges and resolves itself once both are pushed —
-GitHub will simply show both branches. A future merge of `develop` into
-`main` will settle it.
+**Standing recommendation:** this token was pasted into a chat session, so
+treat it as exposed and rotate it when convenient. The workflow works with
+any correctly-scoped token, and equally with an SSH key — no code change is
+needed to switch.
 
 
 ## 4. Branch status
@@ -238,12 +219,15 @@ rewritten; `CLAUDE_GITHUB_ACCESS.md` was extended, not replaced.
 
 | # | Blocker | Owner action | Severity |
 |---|---------|--------------|----------|
-| 1 | Token not scoped to `vit-ngan-harness` (403) | Edit the fine-grained token, add this repo, contents: read+write | **critical** — the loop stops here |
-| 2 | `main` / `develop` diverged | Resolves on its own once both are pushed | low — informational |
-| 3 | 5 commits carry the old fabricated author | Optional; see §13. Recommended to leave. | low |
+| 1 | `gh` not installed | `winget install --id GitHub.cli` | low — PRs via web UI |
+| 2 | Token was exposed in chat | Rotate it when convenient | low — recommend, not blocking |
+| 3 | `main` / `develop` diverged | Resolves on the next `develop` → `main` merge | low — informational |
 | 4 | No Gradle project | Comes with M0 product work | expected, not a defect |
-| 5 | `gh` not installed | `winget install --id GitHub.cli` | low — PRs via web UI |
-| 6 | Credential-helper override depends on `$GITHUB_TOKEN` | Works today; decide whether to keep | low — currently functional |
+| 5 | Credential-helper override depends on `$GITHUB_TOKEN` | Works today; decide whether to keep | low |
+
+**No hard blockers remain.** GitHub is the source of truth and the
+Claude → GitHub → Cline handoff chain is executable end to end for the
+first time.
 
 ## 13. Git identity — CORRECTED
 
@@ -286,26 +270,22 @@ branches have the history.
 
 ## 14. Next required action
 
-**One action, and it blocks everything downstream:**
+**The environment is ready. There is no blocking action left.**
 
-> Open https://github.com/settings/personal-access-tokens, edit the token
-> exported as `GITHUB_TOKEN`, and add `vit-ngan-harness` to its repository
-> access with **Repository contents: Read and write**.
+Optional cleanups, none blocking:
 
-Then, in the same PowerShell session:
+| Action | Why |
+|--------|-----|
+| Rotate the GitHub token | It was pasted into a chat session |
+| `winget install --id GitHub.cli` | Enables `gh pr create` from the CLI |
+| Merge `develop` into `main` | Settles the branch divergence |
 
-```powershell
-.\scripts\git-fetch-all.ps1
-git push -u origin main
-git push -u origin develop
-git branch -vv     # expect: main -> origin/main, develop -> origin/develop
-git status
-```
+**Next product step — not started, by instruction:**
 
-`origin` is already configured and reachable, so no other setup is needed —
-this is the last blocker.
+> M0 architecture audit of the Hermes Android project
 
-Product work (M0) has **not** started, and is not started by this task.
+This task was environment finalization only. No product code was written,
+no Hermes source was modified, and M0 product work has not begun.
 
 
 ## 11. Secret protection status

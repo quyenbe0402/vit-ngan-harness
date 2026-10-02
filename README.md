@@ -165,27 +165,30 @@ not a failure.
 
 ## Current blockers
 
-| ID | Blocker | Owner action |
-|----|---------|--------------|
-| B1 | Push to `origin` returns 403 | Edit the fine-grained token, add `vit-ngan-harness`, contents: read+write |
-| — | No GitHub CLI (`gh`) | Optional: `winget install --id GitHub.cli` |
+**None blocking.** The full chain works end to end.
 
-**Already resolved:** git identity set to `quyenbe0402`; `origin` connected
-to https://github.com/quyenbe0402/vit-ngan-harness; `git ls-remote origin`
-succeeds (repo correctly reports empty).
+| ID | Item | Owner action | Severity |
+|----|------|--------------|----------|
+| — | GitHub CLI (`gh`) not installed | Optional: `winget install --id GitHub.cli` | low |
+| — | Token pasted into a chat session | Rotate when convenient | low |
+| — | `main` / `develop` diverged | Settles on the next `develop` → `main` merge | low |
 
-The 403 is a **token scope** problem, not a network or URL problem: the same
-token pushes fine to `game-ngoc-rong-offline` but is refused by the new
-repository, which was never added to the token's repository selection.
+**Resolved:** git identity `quyenbe0402`; `origin` connected to
+https://github.com/quyenbe0402/vit-ngan-harness; `main` and `develop` both
+pushed and tracking configured.
+
+The token needed two permissions: `Contents: Read and write`, and
+`Workflows: Read and write` (the second is required to push
+`.github/workflows/*`, which GitHub treats as executable code).
 
 A physical Android device is connected and ready (see
 `docs/ANDROID_DEVICE_WORKFLOW.md`).
 
-Once the token is fixed:
+Routine commands from now on:
 
 ```powershell
-git push -u origin main
-git push -u origin develop
+git fetch origin
+git push
 git branch -vv
 ```
 
