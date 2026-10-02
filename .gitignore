@@ -37,6 +37,13 @@ send-cycle*.cjs
 send-gpt-*.js
 gen-send-*.cjs
 
+# ---- Gradle / Android build artifacts (M0-001 Phase 0) ----
+.gradle/
+build/
+local.properties
+captures/
+.cxx/
+
 # ---- OS / editor noise ----
 Thumbs.db
 desktop.ini
