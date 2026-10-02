@@ -90,9 +90,16 @@ username or personal path.
 | ID | Blocker | Owner action |
 |----|---------|--------------|
 | B1 | No Git remote configured | Create the GitHub repo, then `git remote add origin <url>` |
-| B2 | No Git commit identity | `git config user.name` / `user.email` |
-| B3 | No physical Android device connected | Connect by USB-C, enable USB debugging, accept the ADB prompt |
 | B4 | GitHub authentication unverified | Follow `docs/GITHUB_AUTH_SETUP.md` |
+| — | No GitHub CLI (`gh`) | Optional: `winget install --id GitHub.cli` |
+
+A physical Android device is connected and ready (see
+`docs/ANDROID_DEVICE_WORKFLOW.md`). Git commit identity is configured for
+this repository.
+
+Until B1 and B4 are resolved, the loop can be run all the way to the commit
+but **not** through the push. That stage has been reported as `BLOCKED`, not
+simulated.
 
 ---
 
