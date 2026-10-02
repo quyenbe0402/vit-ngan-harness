@@ -1,0 +1,46 @@
+# ---- Secrets and local credentials (NEVER commit) ----
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+*.p12
+*.pfx
+*.jks
+*.keystore
+keystore.properties
+google-services.json
+local.properties
+gradle.properties.local
+secrets.properties
+credentials.json
+service-account*.json
+.gh-token
+token.txt
+
+# ---- Machine / agent-local tool configuration ----
+.mcp.json
+.claude/
+.playwright-mcp/
+.vscode/*
+!.vscode/extensions.json
+
+# ---- Scratch / temporary artifacts ----
+*.log
+logcat-*.txt
+workflow-test.txt
+.run-compact-*.md
+cycle8text.txt
+gpt-c6-reply.txt
+send-cycle*.js
+send-cycle*.cjs
+send-gpt-*.js
+gen-send-*.cjs
+
+# ---- OS / editor noise ----
+Thumbs.db
+desktop.ini
+.DS_Store
+.idea/
+*.iml
+*.swp
