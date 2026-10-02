@@ -136,19 +136,25 @@ See `docs/ANDROID_DEVICE_WORKFLOW.md`.
 
 | ID | Blocker | Blocks | Owner action |
 |----|---------|--------|--------------|
-| B1 | No `origin` remote | The entire push/handoff chain | **Supply the GitHub repository URL**, then `git remote add origin <url>` |
-| B4 | No GitHub authentication verified | Push | Complete `docs/GITHUB_AUTH_SETUP.md` |
-| B7 | Fabricated local git identity | Correct authorship | Correct it — see `docs/DEVELOPMENT_STATUS.md` §13 |
-| B3 | *(RESOLVED)* No physical device | Device validation | Device `b36d068a` is connected and authorised |
-| B2 | *(RESOLVED)* No commit identity | Any commit | A local identity exists (see B7) |
+| B1 | Target repository does not exist | The entire push/handoff chain | Create `hermes-android-harness` (Public) at https://github.com/new — **do not** tick "Add a README" |
+| B2 | Token cannot create repositories (403) | Programmatic repo creation | Use the web UI, or issue a token with repo-creation rights |
+| B3 | *(RESOLVED)* No physical device | Device validation | Device `b36d068a` connected and authorised |
+| B7 | *(RESOLVED)* Fabricated git identity | Correct authorship | Identity set to `quyenbe0402 <quyenbe0402@gmail.com>` |
 
-**B1 is the single hard blocker.** The brief supplied the literal
-placeholder `<PUT_THE_GITHUB_REPOSITORY_URL_HERE>` rather than a real URL, so
-no remote was configured. Guessing one was rejected: a wrong URL would point
-this repository at a repository that does not exist, or at someone else's.
+**Already verified:** GitHub network access works, the account is confirmed
+as `quyenbe0402`, and **push authentication succeeds** (proven with a dry
+run that transferred nothing).
 
-B1 and B4 prevent the Claude → GitHub → Cline handoff from completing.
-Everything up to the commit has been verified working locally.
+**B1 is the only hard blocker left.** The account `quyenbe0402` has exactly
+one repository, `game-ngoc-rong-offline`, which is an unrelated game
+project — so there was no obvious existing repo to connect to. The URL
+supplied was a profile URL, not a repository URL.
+
+Once the repository exists:
+
+```
+git remote add origin https://github.com/quyenbe0402/hermes-android-harness.git
+```
 
 Full measured environment status: `docs/DEVELOPMENT_STATUS.md`.
 

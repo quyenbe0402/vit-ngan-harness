@@ -167,17 +167,22 @@ not a failure.
 
 | ID | Blocker | Owner action |
 |----|---------|--------------|
-| B1 | No Git remote configured | Supply the repository URL, then `git remote add origin <url>` |
-| B4 | GitHub authentication unverified | Follow `docs/GITHUB_AUTH_SETUP.md` |
-| B7 | Fabricated local git identity | Correct it — see `docs/DEVELOPMENT_STATUS.md` §13 |
+| B1 | Target repository does not exist | Create `hermes-android-harness` (Public) at https://github.com/new — **do not** tick "Add a README" |
+| B2 | Token cannot create repositories (403) | Use the web UI, or issue a token with repo-creation rights |
 | — | No GitHub CLI (`gh`) | Optional: `winget install --id GitHub.cli` |
+
+**Already resolved:** git identity is set to `quyenbe0402`, GitHub network
+access works, and **push authentication is verified** (proven with a dry run
+that transferred nothing).
 
 A physical Android device is connected and ready (see
 `docs/ANDROID_DEVICE_WORKFLOW.md`).
 
-Until B1 and B4 are resolved, the loop can be run all the way to the commit
-but **not** through the push. That stage has been reported as `BLOCKED`, not
-simulated.
+Once the repository exists, connect it:
+
+```
+git remote add origin https://github.com/quyenbe0402/hermes-android-harness.git
+```
 
 Full measured status: [`docs/DEVELOPMENT_STATUS.md`](docs/DEVELOPMENT_STATUS.md).
 
