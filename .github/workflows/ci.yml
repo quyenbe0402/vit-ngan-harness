@@ -1,0 +1,198 @@
+name: CI
+
+# ---------------------------------------------------------------------------
+# WHAT THIS IS
+#
+# A skeleton that validates the DEVELOPMENT PLATFORM, not the product.
+#
+# WHY IT IS DELIBERATELY GATED
+#
+# The Android product project does not exist yet. There is no gradlew, no
+# application module and no test source. A workflow that unconditionally runs
+# ./gradlew would fail on every single run, and a permanently-red check is
+# worse than no check at all: people learn to ignore it, and the first real
+# signal it ever carries gets dismissed along with the noise.
+#
+# So each product job is gated on the Gradle wrapper actually being present.
+# Until the project lands, those jobs are SKIPPED and the run stays green.
+# The moment gradlew.bat is committed, they switch themselves on.
+# Nothing needs to be edited at that point.
+# ---------------------------------------------------------------------------
+
+on:
+  push:
+    branches: [ main, develop, 'claude/**', 'cline/**' ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # -------------------------------------------------------------------------
+  # 1. Repository validation - always runs, passes today.
+  #    Confirms the workflow skeleton itself is sound and nothing is broken.
+  # -------------------------------------------------------------------------
+  repository:
+    name: Repository validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify the required workflow documents exist
+        run: |
+          set -euo pipefail
+          required="
+            README.md
+            DEVELOPMENT_STATUS.md
+            Hermes_Android_Agent_PROJECT_PLAN.md
+            docs/AGENT_WORKFLOW.md
+            docs/AGENT_ROLES.md
+            docs/CLAUDE_GITHUB_ACCESS.md
+            docs/DEVELOPMENT_LOOP.md
+            docs/HANDOFF_PROTOCOL.md
+            docs/REPORT_FORMAT.md
+            docs/SECRETS_POLICY.md
+          "
+          missing=0
+          for f in $required; do
+            if [ -f "$f" ]; then
+              echo "present: $f"
+            else
+              echo "MISSING: $f"
+              missing=1
+            fi
+          done
+          [ "$missing" -eq 0 ] || { echo "Required documents are missing"; exit 1; }
+
+      - name: Verify no PowerShell script contains a hardcoded secret
+        run: |
+          set -euo pipefail
+          # Fails the build if a script ever contains a credential literal.
+          # Patterns only - no secret values are stored in this repository.
+          if grep -rInE \
+            -e 'ghp_[A-Za-z0-9]{20,}' \
+            -e 'github_pat_[A-Za-z0-9_]{20,}' \
+            -e '-----BEGIN (RSA |OPENSSH |EC )?PRIVATE KEY-----' \
+            -e 'AKIA[0-9A-Z]{16}' \
+            scripts/ docs/ handoff/ 2>/dev/null; then
+            echo "::error::A credential literal was found. Remove it immediately."
+            exit 1
+          fi
+          echo "No credential literals found in scripts/, docs/ or handoff/."
+
+      - name: Verify secret-bearing files are not tracked
+        run: |
+          set -euo pipefail
+          tracked=$(git ls-files | grep -E \
+            '(^|/)\.env($|\.)|local\.properties$|\.keystore$|\.jks$|\.p12$|\.pfx$|\.pem$|\.key$|credentials|secrets|service-account' || true)
+          if [ -n "$tracked" ]; then
+            echo "::error::Secret-bearing files are tracked in Git:"
+            echo "$tracked"
+            exit 1
+          fi
+          echo "No secret-bearing files are tracked."
+
+  # -------------------------------------------------------------------------
+  # 2. Secret scanning - cheap, and catches the class of mistake that is
+  #    expensive to undo once it reaches history.
+  # -------------------------------------------------------------------------
+  secret-scan:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    needs: repository
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Scan history and working tree with gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          # Reports findings. Does not auto-fix: a leaked credential must be
+          # ROTATED first, and removing the file afterwards does not undo
+
+  # -------------------------------------------------------------------------
+  # 3. Java toolchain - runs today (records the version), does the real
+  #    build check only once a Gradle project exists.
+  # -------------------------------------------------------------------------
+  java:
+    name: Java toolchain
+    runs-on: ubuntu-latest
+    needs: repository
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Report Java version
+        run: java -version 2>&1
+
+      - name: Detect whether the Android project exists yet
+        id: probe
+        run: |
+          set -euo pipefail
+          if [ -f "gradlew" ] || [ -f "gradlew.bat" ]; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+            echo "Gradle wrapper detected - product jobs will run."
+          else
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            echo "No Gradle wrapper yet - product jobs are skipped."
+            echo "This is expected: the repository currently holds development"
+            echo "infrastructure only, and the product project has not been created."
+          fi
+
+      # ---- compile ----
+      - name: Compile
+        if: steps.probe.outputs.found == 'true'
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Assemble debug
+        if: steps.probe.outputs.found == 'true'
+        run: ./gradlew assembleDebug --stacktrace
+
+      # ---- unit tests ----
+      - name: Unit tests
+        if: steps.probe.outputs.found == 'true'
+        run: ./gradlew testDebugUnitTest --stacktrace
+
+      - name: Upload test report
+        if: steps.probe.outputs.found == 'true' && always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-report
+          path: '**/build/reports/tests/**'
+          if-no-files-found: ignore
+
+  # -------------------------------------------------------------------------
+  # 4. Physical-device validation is NOT in CI, by design.
+  #
+  #    The ground truth for runtime behaviour is the user's real phone over
+  #    USB-C. It is attended, human-in-the-loop, and run locally by Cline
+  #    (see docs/ANDROID_DEVICE_WORKFLOW.md).
+  #
+  #    A hosted emulator is not a substitute: it grants permissions
+  #    differently, has no battery optimisation, no OEM background
+  #    restrictions, and a different ABI. A green emulator run is not
+  #    evidence the app works on the user's device.
+  #
+  #    When instrumentation tests are eventually added, connectedAndroidTest
+  #    may be added here as an EXTRA signal - never as a replacement.
+  # -------------------------------------------------------------------------
+
+          # the exposure.
+          fail-on-error: true

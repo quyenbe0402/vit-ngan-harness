@@ -83,32 +83,113 @@ adb devices
 Every script is project-relative, contains no secrets, and hardcodes no
 username or personal path.
 
+## Documentation index
+
+Every document is reachable from here. Nothing important is buried.
+
+### Specification and state
+
+| Document | What it is |
+|----------|------------|
+| [`Hermes_Android_Agent_PROJECT_PLAN.md`](Hermes_Android_Agent_PROJECT_PLAN.md) | **The master specification.** Authoritative for the product. Not rewritten by environment work. |
+| [`DEVELOPMENT_STATUS.md`](DEVELOPMENT_STATUS.md) | Authoritative **product/task** state. Both agents update it. |
+| [`docs/DEVELOPMENT_STATUS.md`](docs/DEVELOPMENT_STATUS.md) | **Environment** status scan (this finalization's measurements). |
+
+### Roles and workflow
+
+| Document | What it defines |
+|----------|-----------------|
+| [`docs/AGENT_WORKFLOW.md`](docs/AGENT_WORKFLOW.md) | **Start here.** Claude, GitHub, Cline, the phone, and the user. |
+| [`docs/AGENT_ROLES.md`](docs/AGENT_ROLES.md) | Detailed MAY / MAY NOT per agent |
+| [`docs/DEVELOPMENT_LOOP.md`](docs/DEVELOPMENT_LOOP.md) | The canonical loop, stage by stage |
+| [`docs/CLAUDE_WORKFLOW.md`](docs/CLAUDE_WORKFLOW.md) | Claude's 12-step procedure |
+| [`docs/CLINE_WORKFLOW.md`](docs/CLINE_WORKFLOW.md) | Cline's 21-step procedure |
+| [`docs/CLAUDE_TASK_PROTOCOL.md`](docs/CLAUDE_TASK_PROTOCOL.md) | Claude's task lifecycle |
+| [`docs/CLINE_TASK_PROTOCOL.md`](docs/CLINE_TASK_PROTOCOL.md) | Cline's task lifecycle |
+
+### Handoff
+
+| Document | What it defines |
+|----------|-----------------|
+| [`docs/HANDOFF_PROTOCOL.md`](docs/HANDOFF_PROTOCOL.md) | Both handoff directions, required fields, task IDs |
+| [`docs/REPORT_FORMAT.md`](docs/REPORT_FORMAT.md) | The exact report template |
+| [`handoff/README.md`](handoff/README.md) | Handoff directory layout and templates |
+
+### GitHub access
+
+| Document | What it defines |
+|----------|-----------------|
+| [`docs/CLAUDE_GITHUB_ACCESS.md`](docs/CLAUDE_GITHUB_ACCESS.md) | MODE A / MODE B. **Clean APIs is not GitHub access.** |
+| [`docs/GITHUB_AUTH_SETUP.md`](docs/GITHUB_AUTH_SETUP.md) | Auth options and the owner checklist |
+
+### Android and device
+
+| Document | What it defines |
+|----------|-----------------|
+| [`docs/ANDROID_DEVICE_WORKFLOW.md`](docs/ANDROID_DEVICE_WORKFLOW.md) | USB-C → ADB → install → launch → Logcat |
+| [`docs/DEVELOPMENT_ENVIRONMENT_BASELINE.md`](docs/DEVELOPMENT_ENVIRONMENT_BASELINE.md) | Full machine inventory |
+| [`.github/workflows/README.md`](.github/workflows/README.md) | CI stages and the enablement checklist |
+
+### Policy
+
+| Document | What it defines |
+|----------|-----------------|
+| [`docs/SECRETS_POLICY.md`](docs/SECRETS_POLICY.md) | What must never enter the repository |
+
+---
+
+## Build and test instructions
+
+There is **no build yet** — the Android product project does not exist. When
+it does, these are the commands, unchanged:
+
+```powershell
+.\scripts\build.ps1            # Gradle assembleDebug  -> APK
+.\scripts\test.ps1             # lint + unit tests
+```
+
+Until then both report `NOT CONFIGURED` (exit 3). That is intentional and is
+not a failure.
+
+---
+
+## Environment instructions
+
+```powershell
+.\scripts\doctor.ps1           # everything: git, tools, SDK, device
+.\scripts\android-check.ps1    # JDK, Gradle, SDK, adb only
+.\scripts\device-check.ps1     # the physical phone only
+```
+
 ---
 
 ## Current blockers
 
 | ID | Blocker | Owner action |
 |----|---------|--------------|
-| B1 | No Git remote configured | Create the GitHub repo, then `git remote add origin <url>` |
+| B1 | No Git remote configured | Supply the repository URL, then `git remote add origin <url>` |
 | B4 | GitHub authentication unverified | Follow `docs/GITHUB_AUTH_SETUP.md` |
+| B7 | Fabricated local git identity | Correct it — see `docs/DEVELOPMENT_STATUS.md` §13 |
 | — | No GitHub CLI (`gh`) | Optional: `winget install --id GitHub.cli` |
 
 A physical Android device is connected and ready (see
-`docs/ANDROID_DEVICE_WORKFLOW.md`). Git commit identity is configured for
-this repository.
+`docs/ANDROID_DEVICE_WORKFLOW.md`).
 
 Until B1 and B4 are resolved, the loop can be run all the way to the commit
 but **not** through the push. That stage has been reported as `BLOCKED`, not
 simulated.
+
+Full measured status: [`docs/DEVELOPMENT_STATUS.md`](docs/DEVELOPMENT_STATUS.md).
 
 ---
 
 ## Directory layout
 
 ```
-docs/            all workflow documentation (start at AGENT_ROLES.md)
+docs/            all workflow documentation (start at AGENT_WORKFLOW.md)
 scripts/         PowerShell tooling for git, build, test, device
-handoff/         agent-to-agent transport area (never secrets)
-.github/         future CI structure (no workflows enabled yet)
-DEVELOPMENT_STATUS.md    live shared state — read this first
+handoff/         agent-to-agent transport area (claude/ cline/ reports/)
+.github/         CI skeleton (ci.yml) - product jobs gated on Gradle
+DEVELOPMENT_STATUS.md    live product/task state - read this first
+Hermes_Android_Agent_PROJECT_PLAN.md    the master specification
 ```

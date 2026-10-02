@@ -132,18 +132,25 @@ See `docs/ANDROID_DEVICE_WORKFLOW.md`.
 7. **No push has ever been performed.** The dry run confirmed the full local
    loop, but the push stage is BLOCKED, so no commit has left this machine.
 
-## Blocked issues
+## Blockers
 
 | ID | Blocker | Blocks | Owner action |
 |----|---------|--------|--------------|
-| B1 | No `origin` remote | The entire push/handoff chain | Create the GitHub repo; `git remote add origin <url>` |
+| B1 | No `origin` remote | The entire push/handoff chain | **Supply the GitHub repository URL**, then `git remote add origin <url>` |
 | B4 | No GitHub authentication verified | Push | Complete `docs/GITHUB_AUTH_SETUP.md` |
-| B3 | *(RESOLVED)* No physical device | Device validation | Device `b36d068a` is now connected and authorised |
-| B2 | *(RESOLVED)* No commit identity | Any commit | Identity configured for this repository |
+| B7 | Fabricated local git identity | Correct authorship | Correct it — see `docs/DEVELOPMENT_STATUS.md` §13 |
+| B3 | *(RESOLVED)* No physical device | Device validation | Device `b36d068a` is connected and authorised |
+| B2 | *(RESOLVED)* No commit identity | Any commit | A local identity exists (see B7) |
 
-**B1 and B4 are the remaining hard blockers.** They prevent the
-Claude → GitHub → Cline handoff from completing. Everything up to the push
-has been verified working locally.
+**B1 is the single hard blocker.** The brief supplied the literal
+placeholder `<PUT_THE_GITHUB_REPOSITORY_URL_HERE>` rather than a real URL, so
+no remote was configured. Guessing one was rejected: a wrong URL would point
+this repository at a repository that does not exist, or at someone else's.
+
+B1 and B4 prevent the Claude → GitHub → Cline handoff from completing.
+Everything up to the commit has been verified working locally.
+
+Full measured environment status: `docs/DEVELOPMENT_STATUS.md`.
 
 ## Dry run
 

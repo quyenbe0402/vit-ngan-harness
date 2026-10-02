@@ -8,10 +8,22 @@ this workflow, and exactly where the Git operation happens.
 **Do not assume that a browser chat connected to an API gateway has GitHub
 write access.**
 
-A chat interface that reaches a model through an API is a **model and
-transport** capability. It is not, by itself, a **Git** capability. Being
-able to call a model says nothing about whether that environment has a Git
-client, a checkout, a remote, or credentials.
+### Clean APIs is not GitHub access
+
+**Clean APIs is a model/API transport layer.** It describes how a request
+reaches a model — the transport, not the permissions. Knowing that the model
+is reachable tells you nothing about whether the surrounding environment has:
+
+- a Git client
+- a checkout of this repository
+- a configured `origin`
+- working credentials
+
+These are four separate facts. Only the fourth is even about access, and
+only a real push proves it.
+
+**A working API connection is not proof of repository write access. Not
+"probably", not "likely" — not proof at all.**
 
 Therefore, before planning any handoff, answer this question explicitly:
 
@@ -225,7 +237,37 @@ rather than inventing a SHA.
 
 **MODE B is the working assumption for this project** until a `git push` is
 observed to succeed from a Claude-side environment. A chat interface is not
-proof of Git access.
+proof of Git access, and neither is a working API connection.
 
-Until the owner completes `docs/GITHUB_AUTH_SETUP.md`, the repository also
-has no remote, so neither mode is currently executable end to end.
+**Verified state as of the last environment finalization:**
+
+| Fact | State |
+|------|-------|
+| Local Git repository | EXISTS, 3 branches, clean tree |
+| `origin` remote | **NOT CONFIGURED** — no repository URL was supplied |
+| Push to any remote | **NEVER PERFORMED** |
+| Claude-side Git access | **UNVERIFIED** — assumed MODE B |
+| Credentials | Owned by the user; not held, requested, or recorded by any agent |
+
+Because no remote exists, neither mode is currently executable end to end.
+The repository URL is required before this can change. See
+`docs/GITHUB_AUTH_SETUP.md` and `docs/DEVELOPMENT_STATUS.md`.
+
+---
+
+## 10. What a MODE A verification must show
+
+Do not accept a claim of MODE A. Require this evidence:
+
+```
+git remote -v                          # an actual origin URL
+git status                             # inside a real checkout
+git push --dry-run origin <branch>     # authentication actually succeeds
+```
+
+All three, in the same shell, in Claude's environment. A green dry-run is
+proof. A description of a capability is not. A working API connection is
+not.
+
+If the dry-run cannot be performed, the mode is B — regardless of how the
+environment is described.
