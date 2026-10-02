@@ -225,9 +225,30 @@ rewritten; `CLAUDE_GITHUB_ACCESS.md` was extended, not replaced.
 | 4 | No Gradle project | Comes with M0 product work | expected, not a defect |
 | 5 | Credential-helper override depends on `$GITHUB_TOKEN` | Works today; decide whether to keep | low |
 
+| Clean APIs mode | **UNKNOWN** | awaiting one Playground test — see `docs/CLEAN_APIS_MODE_DECISION.md` |
+
 **No hard blockers remain.** GitHub is the source of truth and the
 Claude → GitHub → Cline handoff chain is executable end to end for the
 first time.
+
+## 15. Clean APIs access mode — the one open question
+
+| Field | Value |
+|-------|-------|
+| Account | `quyenbe0402`, authenticated |
+| Repository | `quyenbe0402/vit-ngan-harness` |
+| Claude-side shell/filesystem | **UNVERIFIED** |
+| Working assumption | **MODE B** (chat-only, no repository write) |
+| Decision procedure | `docs/CLEAN_APIS_MODE_DECISION.md` |
+
+Clean APIs is an API/model gateway. A working model connection is **not**
+evidence of GitHub write access — the two are separate facts, and there is
+no "link GitHub to Clean APIs" step.
+
+Until an actual push is observed from Claude's environment, MODE B applies:
+Claude produces a patch or file set, the owner applies and commits, and
+Cline validates. Both procedures are pre-written so no time is lost once
+the answer is known.
 
 ## 13. Git identity — CORRECTED
 

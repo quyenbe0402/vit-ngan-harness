@@ -121,6 +121,7 @@ Every document is reachable from here. Nothing important is buried.
 |----------|-----------------|
 | [`docs/CLAUDE_GITHUB_ACCESS.md`](docs/CLAUDE_GITHUB_ACCESS.md) | MODE A / MODE B. **Clean APIs is not GitHub access.** |
 | [`docs/GITHUB_AUTH_SETUP.md`](docs/GITHUB_AUTH_SETUP.md) | Auth options and the owner checklist |
+| [`docs/CLEAN_APIS_MODE_DECISION.md`](docs/CLEAN_APIS_MODE_DECISION.md) | MODE A or MODE B — **the one open question** |
 
 ### Android and device
 
