@@ -36,9 +36,9 @@ if ($LASTEXITCODE -ne 0) {
     exit 1
 }
 
-$porcelain = git -C $root status --porcelain 2>$null
-if ($porcelain) {
-    Write-Status -Level WARNING -Message "Working tree has $(@($porcelain).Count uncommitted change(s). They will NOT be pushed."
+$porcelain = @(git -C $root status --porcelain 2>$null)
+if ($porcelain.Count -gt 0) {
+    Write-Status -Level WARNING -Message "Working tree has $($porcelain.Count) uncommitted change(s). They will NOT be pushed."
     Write-Host 'Commit them first, or stash them.'
 }
 
