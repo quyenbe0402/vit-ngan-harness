@@ -91,8 +91,11 @@ Write-Host ''
 Write-Status -Level PASS -Message "Captured $($content.Count) line(s) -> $OutputPath"
 
 # ---- summary ----
-$errs   = @($content | Where-Object { $_ -match '\sE\s' -or $_ -match '^\s*E/' })
-$crash  = @($content | Where-Object { $_ -match 'FATAL EXCEPTION|AndroidRuntime.*Process.*died|ANR in' })
+# `adb logcat -v time` renders levels as "I/Tag", "E/Tag", "W/Tag" - not as a
+# bare letter between spaces. Matching the spaced form silently reported every
+# error line as zero, which is the exact failure this summary exists to catch.
+$errs   = @($content | Where-Object { $_ -match '\sE/' -or $_ -match '\sF/' })
+$crash  = @($content | Where-Object { $_ -match 'FATAL EXCEPTION|ANR in |Force finishing activity.*has died' })
 
 Write-Host ''
 Write-Host '--- Summary ---' -ForegroundColor Cyan
