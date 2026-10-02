@@ -167,21 +167,26 @@ not a failure.
 
 | ID | Blocker | Owner action |
 |----|---------|--------------|
-| B1 | Target repository does not exist | Create `hermes-android-harness` (Public) at https://github.com/new — **do not** tick "Add a README" |
-| B2 | Token cannot create repositories (403) | Use the web UI, or issue a token with repo-creation rights |
+| B1 | Push to `origin` returns 403 | Edit the fine-grained token, add `vit-ngan-harness`, contents: read+write |
 | — | No GitHub CLI (`gh`) | Optional: `winget install --id GitHub.cli` |
 
-**Already resolved:** git identity is set to `quyenbe0402`, GitHub network
-access works, and **push authentication is verified** (proven with a dry run
-that transferred nothing).
+**Already resolved:** git identity set to `quyenbe0402`; `origin` connected
+to https://github.com/quyenbe0402/vit-ngan-harness; `git ls-remote origin`
+succeeds (repo correctly reports empty).
+
+The 403 is a **token scope** problem, not a network or URL problem: the same
+token pushes fine to `game-ngoc-rong-offline` but is refused by the new
+repository, which was never added to the token's repository selection.
 
 A physical Android device is connected and ready (see
 `docs/ANDROID_DEVICE_WORKFLOW.md`).
 
-Once the repository exists, connect it:
+Once the token is fixed:
 
-```
-git remote add origin https://github.com/quyenbe0402/hermes-android-harness.git
+```powershell
+git push -u origin main
+git push -u origin develop
+git branch -vv
 ```
 
 Full measured status: [`docs/DEVELOPMENT_STATUS.md`](docs/DEVELOPMENT_STATUS.md).

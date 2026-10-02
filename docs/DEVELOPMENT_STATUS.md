@@ -19,8 +19,8 @@
 | GitHub network | **PASS** | `git ls-remote` reaches GitHub |
 | GitHub account | **PASS** | `quyenbe0402` confirmed via API |
 | Push authentication | **PASS** | verified by dry run, nothing transferred |
-| Git remote `origin` | **BLOCKED** | target repository does not exist yet |
-| Repo creation | **BLOCKED** | fine-grained token returns 403 |
+| Git remote `origin` | **PASS** | `vit-ngan-harness` connected, `ls-remote` exit 0 |
+| Push to `origin` | **BLOCKED** | 403 — token not scoped to this repo |
 | Branch model | **PASS** | main / develop / claude/* / cline/* |
 | PowerShell scripts | **PASS** | 18 scripts, all parse, guards verified |
 | Android SDK | **PASS** | platforms 36/36.1/37.0, build-tools 36.0.0 |
@@ -50,71 +50,85 @@ development. Full detail: `docs/DEVELOPMENT_ENVIRONMENT_BASELINE.md`.
 | History | 4 commits, linear with merges |
 | Tracked files | 39 + this finalization's additions |
 
-## 3. GitHub status — **PARTIALLY RESOLVED**
+## 3. GitHub status — **REMOTE CONNECTED, PUSH BLOCKED**
 
 | Field | Value |
 |-------|-------|
-| GitHub account | `quyenbe0402` (User) — **confirmed via API** |
-| Network reachability | **PASS** — `git ls-remote` succeeds |
-| `GITHUB_TOKEN` | present (93 chars), authenticates as `quyenbe0402` |
-| Token type | **fine-grained** (empty `X-OAuth-Scopes`) |
-| Token can read repos | **YES** |
-| Token can create repos | **NO — 403** `Resource not accessible by personal access token` |
-| **Push authentication** | **VERIFIED WORKING** |
-| `origin` remote | **NOT CONFIGURED** — the target repository does not exist yet |
+| `origin` (fetch) | `https://github.com/quyenbe0402/vit-ngan-harness.git` |
+| `origin` (push) | `https://github.com/quyenbe0402/vit-ngan-harness.git` |
+| Remote repository | **EXISTS** — public, 0 KB, default branch `main` |
+| `git ls-remote origin` | exit 0, **0 refs** (repo is empty) |
+| Network reachability | **PASS** |
+| Account | `quyenbe0402` — confirmed via API |
+| `GITHUB_TOKEN` | present, authenticates as `quyenbe0402` |
+| Token type | **fine-grained** |
+| **Push to `origin`** | **403 DENIED** — see §3.2 |
+| Push to `game-ngoc-rong-offline` | works (proves the credential path itself is valid) |
 
-### 3.1 Push authentication — verified
+### 3.1 What is done
 
-Push rights were proven with a dry run that transferred **nothing**:
+`origin` is configured and reachable. `git ls-remote origin` succeeds and
+correctly reports the remote as empty, so the first push will establish
+`main` as the default branch with no conflict.
 
-```
-git push --dry-run https://github.com/quyenbe0402/game-ngoc-rong-offline.git \
-    HEAD:refs/heads/zz-auth-probe
-  To https://github.com/quyenbe0402/game-ngoc-rong-offline.git
-   * [new branch]      HEAD -> zz-auth-probe
-  exit 0
-```
-
-Afterwards `git ls-remote --heads` was re-run and the probe branch was
-**absent** — confirming the dry run created nothing. This proves the token,
-the credential helper, and the network path all work for push.
-
-### 3.2 Why `origin` is still not configured
-
-The URL supplied was `https://github.com/quyenbe0402` — a **user profile
-URL, not a repository URL**. The account has exactly one repository,
-`game-ngoc-rong-offline`, which is an unrelated game project.
-
-An empty repository must be created for this project. The available token
-is fine-grained and **lacks permission to create repositories** (403), so
-this is a genuine human action, not something an agent should force.
-
-**Owner action — one of:**
-
-**Option 1 — create the repository in the GitHub web UI:**
-
-1. Open https://github.com/new
-2. Repository name: `hermes-android-harness`
-3. Visibility: **Public** (as selected)
-4. **Do not** tick "Add a README", `.gitignore`, or licence — this repository
-   already has history, and auto-initialising creates an unrelated root
-   commit that must be merged by hand
-5. Create it
-6. Then run:
+### 3.2 Why the push is denied — fine-grained token scope
 
 ```
-git remote add origin https://github.com/quyenbe0402/hermes-android-harness.git
-git ls-remote origin        # empty output is EXPECTED and correct
+remote: Permission to quyenbe0402/vit-ngan-harness.git denied to quyenbe0402.
+fatal: ... The requested URL returned error: 403
 ```
 
-**Option 2 — issue a token with repository-creation rights**
+This is **not** a network, URL, or branch problem. The evidence:
 
-Generate a token that can create repositories, expose it as `GITHUB_TOKEN`
-in the shell that runs Git, and the repository can be created
-programmatically. The existing token's scopes would have to be widened,
-which is a credential decision that belongs to the user.
+| Test | Result |
+|------|--------|
+| `git ls-remote origin` | exit 0 — network and URL are correct |
+| API read of `vit-ngan-harness` | OK, `permissions.push = true` |
+| Dry-run push to `vit-ngan-harness` | **403** |
+| Dry-run push to `game-ngoc-rong-offline` | **exit 0 — succeeds** |
 
-See `docs/GITHUB_AUTH_SETUP.md`.
+The same token pushes successfully to the older repository but is refused
+by the new one. That isolates the cause to the token's **repository
+selection**: the fine-grained token was granted access to
+`game-ngoc-rong-offline` only, and `vit-ngan-harness` was never added to it.
+
+The API's `permissions.push = true` describes the *account's* rights on the
+repository, not what this particular token is scoped to. Those are different
+things, which is why the API looked permissive while the push was refused.
+
+### 3.3 Owner action — fix the token scope
+
+1. Open https://github.com/settings/personal-access-tokens
+2. Edit the token currently exported as `GITHUB_TOKEN`
+3. Under **Repository access**, add `vit-ngan-harness`
+4. Confirm **Permissions → Repository contents: Read and write**
+5. Save — the token value stays the same, so `$env:GITHUB_TOKEN` does not
+   need to be replaced unless the token was regenerated
+
+Then re-run, in the same PowerShell session:
+
+```powershell
+.\scripts\git-fetch-all.ps1
+git push -u origin main
+git push -u origin develop
+git branch -vv
+```
+
+If the token value was regenerated, re-export it before pushing:
+
+```powershell
+$env:GITHUB_TOKEN = '<new value>'
+```
+
+**Never commit the token and never paste it into a file in this repository.**
+
+### 3.4 Note on the branch divergence
+
+`main` and `develop` have diverged: `develop` is **2 commits ahead**,
+`main` is **1 commit ahead** (a merge commit from the earlier setup). This
+is normal after the setup merges and resolves itself once both are pushed —
+GitHub will simply show both branches. A future merge of `develop` into
+`main` will settle it.
 
 
 ## 4. Branch status
@@ -224,8 +238,8 @@ rewritten; `CLAUDE_GITHUB_ACCESS.md` was extended, not replaced.
 
 | # | Blocker | Owner action | Severity |
 |---|---------|--------------|----------|
-| 1 | Target repository does not exist | Create `hermes-android-harness` (Public) in the GitHub UI | **critical** — the loop stops here |
-| 2 | Token cannot create repositories (403) | Use the web UI, or issue a token with repo-creation rights | **critical** — follows from 1 |
+| 1 | Token not scoped to `vit-ngan-harness` (403) | Edit the fine-grained token, add this repo, contents: read+write | **critical** — the loop stops here |
+| 2 | `main` / `develop` diverged | Resolves on its own once both are pushed | low — informational |
 | 3 | 5 commits carry the old fabricated author | Optional; see §13. Recommended to leave. | low |
 | 4 | No Gradle project | Comes with M0 product work | expected, not a defect |
 | 5 | `gh` not installed | `winget install --id GitHub.cli` | low — PRs via web UI |
@@ -274,21 +288,22 @@ branches have the history.
 
 **One action, and it blocks everything downstream:**
 
-> Create the empty repository `hermes-android-harness` (Public) at
-> https://github.com/quyenbe0402/hermes-android-harness
->
-> **Do not** tick "Add a README" / `.gitignore` / licence.
+> Open https://github.com/settings/personal-access-tokens, edit the token
+> exported as `GITHUB_TOKEN`, and add `vit-ngan-harness` to its repository
+> access with **Repository contents: Read and write**.
 
-Then:
+Then, in the same PowerShell session:
 
-```
-git remote add origin https://github.com/quyenbe0402/hermes-android-harness.git
+```powershell
 .\scripts\git-fetch-all.ps1
-.\scripts\branch-push.ps1 -Branch develop -DryRun
+git push -u origin main
+git push -u origin develop
+git branch -vv     # expect: main -> origin/main, develop -> origin/develop
+git status
 ```
 
-Push authentication is already proven, so the first real push should
-succeed immediately.
+`origin` is already configured and reachable, so no other setup is needed —
+this is the last blocker.
 
 Product work (M0) has **not** started, and is not started by this task.
 
