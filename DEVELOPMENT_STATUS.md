@@ -26,10 +26,14 @@ documented, and the Hermes Android project has been audited.
 
 | Field | Value |
 |-------|-------|
-| Task ID | `M0-ENV-001` (environment setup, ad hoc naming for this task) |
+| Task ID | `M0-ENV-001` (environment setup) then `M0-001-dryrun` (workflow dry run) |
 | Title | Prepare development environment and agent workflow |
 | Assigned to | Cline Desktop |
-| State | COMPLETE (see Blockers) |
+| State | COMPLETE |
+
+Both were completed. The dry run found and repaired five real script
+defects that reading the code had not. See
+`handoff/reports/M0-001-dryrun-integration.md`.
 
 The next task is **`M0-001` — architecture audit of the Hermes Android
 project.** It has not been started, and per the stop condition of this task
@@ -39,8 +43,8 @@ it is not started automatically.
 
 | Field | Value |
 |-------|-------|
-| Current branch | `main` |
-| Working tree | see "Git" below |
+| Branches | `main`, `develop` (identical), plus the Cline repair branch |
+| Integration branch | `develop` |
 | Remote `origin` | **NOT CONFIGURED** |
 
 ## Commit
@@ -141,6 +145,24 @@ See `docs/ANDROID_DEVICE_WORKFLOW.md`.
 Claude → GitHub → Cline handoff from completing. Everything up to the push
 has been verified working locally.
 
+## Dry run
+
+| Field | Value |
+|-------|-------|
+| Task | `workflow-test.txt` containing `Hello` — harmless, not product code |
+| Claude stages | PASS — branch created, file written, committed |
+| Cline stages | PASS — inspected, device connected, Logcat captured, 5 defects found and repaired, re-validated |
+| Repairs committed | `69554d0` on `cline/M0-001-fix-scripts` |
+| Cleanup | PASS — test branches and `workflow-test.txt` removed; nothing left behind |
+| **PUSH TEST** | **BLOCKED** — no `origin` remote and no verified credentials |
+
+**PUSH TEST: BLOCKED.** Not faked, and not worked around. Every other stage
+of the loop executed for real.
+
+The dry run earned its keep: it found five genuine defects, including one
+where the Logcat summary reported 0 errors on a capture that contained
+3,178. Reading the code had not revealed any of them.
+
 ## Next task
 
 | Field | Value |
@@ -156,4 +178,5 @@ has been verified working locally.
 
 | Date | Agent | Change |
 |------|-------|--------|
-| 2026-10-02 | Cline | Initial status file. Development environment prepared, documented, and dry-run verified. |
+| 2026-10-02 | Cline | Initial status file. Development environment prepared and documented. |
+| 2026-10-02 | Cline | Workflow dry run executed. 5 script defects found and repaired (`69554d0`). Physical device detected and its properties recorded. Push stage reported BLOCKED. |

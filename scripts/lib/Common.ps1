@@ -56,8 +56,14 @@ function Write-Status {
 
 function Invoke-Git {
     <#
-        Runs git inside the project root and streams output.
-        Returns the git exit code via -PassThru handling below.
+        Runs git inside the project root.
+
+        Git's own output is written straight to the host rather than to the
+        success stream. This matters: if it went to the success stream, a
+        caller doing `$code = Invoke-Git ...` would receive an array containing
+        both git's messages AND the exit code, and the comparison `$code -ne 0`
+        would then be true even on a fully successful command. Only the exit
+        code is returned.
     #>
     param(
         [Parameter(Mandatory = $true)][string[]]$Arguments
@@ -66,8 +72,21 @@ function Invoke-Git {
     $root = Get-ProjectRoot
     Push-Location $root
     try {
-        & $git @Arguments
-        return $LASTEXITCODE
+        # Git writes progress ("Switched to a new branch", "Everything up-to-date")
+        # to stderr. In PowerShell 5.1 that becomes an error record and, with
+        # StrictMode active, prints an alarming red block for a *successful*
+        # command. The temporary preference silences that without hiding real
+        # failures: the exit code is still captured and checked by every caller.
+        $prev = $ErrorActionPreference
+        $ErrorActionPreference = 'SilentlyContinue'
+        try {
+            & $git @Arguments 2>&1 | Out-Host
+            $code = [int]$LASTEXITCODE
+        }
+        finally {
+            $ErrorActionPreference = $prev
+        }
+        return $code
     }
     finally {
         Pop-Location

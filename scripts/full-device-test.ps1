@@ -34,7 +34,10 @@ function Step {
     param([string]$Name, [int]$ExitCode, [string]$Note = '')
     $level = if ($ExitCode -eq 0) { 'PASS' } elseif ($ExitCode -eq 3) { 'WARNING' } else { 'FAIL' }
     $script:results.Add([pscustomobject]@{ Step = $Name; Level = $level; Exit = $ExitCode; Note = $Note }) | Out-Null
-    Write-Host ("[{0}] {1}" -f $level.PadRight(7), $Name) -ForegroundColor (switch ($level) { 'PASS' { 'Green' } 'WARNING' { 'Yellow' } default { 'Red' } })
+    $color = 'Red'
+    if ($level -eq 'PASS') { $color = 'Green' }
+    elseif ($level -eq 'WARNING') { $color = 'Yellow' }
+    Write-Host ("[{0}] {1}" -f $level.PadRight(7), $Name) -ForegroundColor $color
     if ($Note) { Write-Host "        $Note" -ForegroundColor DarkGray }
 }
 
