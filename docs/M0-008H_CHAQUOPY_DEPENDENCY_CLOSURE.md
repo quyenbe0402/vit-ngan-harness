@@ -99,6 +99,22 @@ Hermes needs at least six native packages that are **absent from it entirely**:
 - `resvg-py` - **absent**
 - `orjson` / `charset-normalizer` / `jiter` - **absent**
 
+> **CORRECTION (added by M0-008N, 2026-10-03).** The three names above are not
+> equally supported by evidence, and one of them is wrong:
+>
+> - **`jiter` IS a real Hermes dependency** at `eaecc99c`, reached through
+>   `openai==2.24.0` (`jiter<1,>=0.10.0`). Android-active. Confirmed, and it is
+>   the correct Rust/PyO3 target for the next native-wheel experiment.
+> - **`orjson` is NOT a Hermes dependency at all.** It appears nowhere in
+>   `pyproject.toml` and nowhere in the 426 text files of the `eaecc99c` source
+>   tree. The only package that can pull it in is `discord.py`, under the
+>   `speed` extra, while Hermes requests `discord.py[voice]==2.7.1`.
+>   `orjson` must be removed from the Hermes closure.
+> - **`charset-normalizer` was never verified** as being in the closure.
+>
+> The original line is preserved as written so the audit trail stays readable.
+> See `docs/M0-008N_DEPENDENCY_AUDIT_CORRECTION.md` for the full evidence.
+
 ### The cp314 gap - the decisive finding
 
 For the native packages Chaquopy *does* ship, the available CPython ABI tags

@@ -330,6 +330,11 @@ remaining candidates are not all like httptools.
 
 ## 15. Next candidate
 
+> **AMENDED BY M0-008N (2026-10-03).** This section recommended `orjson`.
+> That was wrong: `orjson` is **not** a Hermes dependency at `eaecc99c`. The
+> Rust/PyO3 candidate in the Hermes closure is **`jiter`** (via
+> `openai==2.24.0`). See `docs/M0-008N_DEPENDENCY_AUDIT_CORRECTION.md`.
+
 `orjson` and `jiter` are Rust packages with no vendored C, so they would test
 the PyO3 path under a different build backend. `PyNaCl` needs libsodium, which
 is the closest analogue to the libffi case already solved. `pillow-heif` and
