@@ -3,14 +3,20 @@ package dev.vitngan.harness.core.runtime
 /**
  * Embedded CPython runtime - **UNSUPPORTED experimental stub**.
  *
- * Declared so the capability is visible and so callers get an explicit
- * UNSUPPORTED health rather than a confusing failure later. It never starts,
- * never accepts frames, and never pretends to work.
+ * This backend is declared so the capability is visible and so callers get an
+ * explicit UNSUPPORTED health rather than a confusing failure later.
  *
- * Embedding CPython on Android is not supported: the interpreter is not
- * available in the NDK, it cannot be shipped legally or reliably, and it
- * would bypass the Termux model the project has adopted.
+ * It deliberately does NOT:
+ *  - use Chaquopy or any embedded-Python toolchain
+ *  - package a native Python runtime
+ *  - start an interpreter
+ *
+ * Embedding CPython on Android is not viable: the interpreter is not provided
+ * by the NDK, shipping it is not legally or reliably possible, and it would
+ * bypass the Termux model this project has adopted. Declaring it as
+ * unsupported is the honest outcome, not a gap to be filled later.
  */
+@ExperimentalM0Runtime
 class EmbeddedPythonRuntimeBackend : HermesRuntime {
 
     override val name: String = "embedded-python"
@@ -32,3 +38,18 @@ class EmbeddedPythonRuntimeBackend : HermesRuntime {
 
     override fun drainIncoming(): List<BridgeMessage> = emptyList()
 }
+
+/**
+ * Marks a runtime surface as experimental and stub-only.
+ *
+ * Deliberately not `kotlin.ExperimentalStdlibApi`: this is a project-level
+ * marker meaning "declared for the contract, not yet integrated", which is a
+ * different and stronger claim than a stdlib stability warning.
+ */
+@RequiresOptIn(
+    level = RequiresOptIn.Level.WARNING,
+    message = "M0 runtime surface is a declared stub. It is not integrated with Hermes.",
+)
+@Retention(AnnotationRetention.BINARY)
+@Target(AnnotationTarget.CLASS, AnnotationTarget.FUNCTION)
+annotation class ExperimentalM0Runtime
