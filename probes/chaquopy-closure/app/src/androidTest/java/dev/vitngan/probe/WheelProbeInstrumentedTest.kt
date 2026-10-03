@@ -50,4 +50,16 @@ class WheelProbeInstrumentedTest {
         println(out)
         println("M0_008M_HTTPTOOLS_END")
     }
+
+    /**
+     * M0-008O: jiter native operations on the physical device.
+     */
+    @Test
+    fun jiterNativeOperation() {
+        val ctx = InstrumentationRegistry.getInstrumentation().targetContext
+        val out = WheelProbe(ctx).runJiter()
+        println("M0_008O_JITER_BEGIN")
+        println(out)
+        println("M0_008O_JITER_END")
+    }
 }

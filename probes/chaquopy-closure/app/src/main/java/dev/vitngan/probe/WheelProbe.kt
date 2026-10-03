@@ -68,5 +68,20 @@ class WheelProbe(private val ctx: Context) {
         }
         return result
     }
-}
 
+    /**
+     * M0-008O. jiter==0.17.0 rebuilt for Android arm64 / CPython 3.14.
+     * jiter is the real Rust/PyO3 dependency of Hermes via openai==2.24.0.
+     * jiter_probe.run() raises on every failure.
+     */
+    fun runJiter(): String {
+        if (!Python.isStarted()) Python.start(AndroidPlatform(ctx))
+        val py = Python.getInstance()
+        val result = py.getModule("jiter_probe")!!.get("run")!!.call()!!.toString()
+        Log.i("M0_008O_JITER", "\n" + result)
+        if (!result.contains("NATIVE_OPERATION_OK")) {
+            throw IllegalStateException("jiter native op missing:\n" + result)
+        }
+        return result
+    }
+}

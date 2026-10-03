@@ -58,6 +58,11 @@ chaquopy {
             // uvicorn. Pure C/Cython, bundles llhttp + http-parser, no external
             // native libraries.
             install("httptools @ file:///" + localWheelDir.toPath().resolve("httptools-0.8.0-cp314-cp314-android_24_arm64_v8a.whl").toString().replace("\\", "/").removePrefix("C:/").let { "C:/" + it })
+            // M0-008O: jiter is the ACTUAL Rust/PyO3 dependency of Hermes,
+            // reached via openai==2.24.0 (jiter<1,>=0.10.0 -> 0.17.0 as of
+            // 2026-10-03 under exclude-newer = "14 days"). Pure Rust, PyO3 0.29.2,
+            // maturin backend, no external native dependency.
+            install("jiter @ file:///" + localWheelDir.toPath().resolve("jiter-0.17.0-cp314-cp314-android_24_arm64_v8a.whl").toString().replace("\\", "/").removePrefix("C:/").let { "C:/" + it })
         }
     }
     sourceSets {
