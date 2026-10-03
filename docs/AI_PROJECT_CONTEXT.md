@@ -73,9 +73,10 @@ These outrank all other sources of authority.
 
 | Milestone | Status |
 |-----------|--------|
-| M0-001 Phase 0 (scaffolding) | **COMPLETE** -â‚¬â€ commit `0f18167` |
-| M0-002 Domain contracts + security foundation | **COMPLETE** â€” 91 tests pass, APK builds |
-| M1+ | NOT STARTED |
+| M0-001 Phase 0 (scaffolding) | **COMPLETE** - `0f18167` |
+| M0-002 Domain contracts + security foundation | **COMPLETE** - `676068d`, merged to develop as `99cc67d` |
+| M0-003 Persistence + eventing | **COMPLETE** - `b7b7b7e` (129 tests pass) |
+| M0-004 / M1 | NOT STARTED |
 
 M0-001 established (do not redo): JDK 17.0.20.1 Temurin, AGP 8.7.3,
 Gradle 8.10.2, Kotlin 2.0.21, KSP 2.0.21-1.0.28, Hilt 2.51.1,
@@ -84,10 +85,10 @@ compileSdk 36 / targetSdk 36 / minSdk 26, namespace + applicationId
 
 ## 5. Current branch
 
-`claude/M0-002-domain-contracts` (from `develop` @ `d070fa7`)
+`claude/M0-003-persistence-eventing`
 
 Branches: `main`, `develop`, `claude/M0-001-foundation`,
-`cline/M0-001-validation`, `claude/M0-002-domain-contracts`.
+`cline/M0-001-validation`, `claude/M0-002-domain-contracts`, `claude/M0-003-persistence-eventing`.
 
 ## 6. Toolchain
 
@@ -151,7 +152,7 @@ architecture and review advisor.
 tool executes the *same* model as the executor, so it is not an independent
 reviewer and cannot satisfy the intent of those checkpoints. Rather than
 simulate a second opinion, GPT checkpoints are reported as **UNAVAILABLE**,
-and review is performed against the security invariants in Ã‚Â§3, which are
+and review is performed against the security invariants in -3, which are
 objective and testable.
 
 The user remains the final authority on architecture and security.
