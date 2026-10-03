@@ -77,8 +77,9 @@ These outrank all other sources of authority.
 | M0-002 Domain contracts + security foundation | **COMPLETE** - `676068d`, merged to develop as `99cc67d` |
 | M0-003 Persistence + eventing | **COMPLETE** - `b7b7b7e`, merged to develop as `21d0a9c` |
 | M0-004 Runtime abstraction stubs | **COMPLETE** - `5207fcf`, merged to develop as `0430a6e` |
-| M0-005 UI shell (Compose) | **COMPLETE** - `1defdae` (179 unit + 12 instrumented on device) |
-| M0-006 / M1 | NOT STARTED |
+| M0-005 UI shell (Compose) | **COMPLETE** - `1defdae`, merged to develop as `8e32a58` |
+| M0-006 Hermes bridge foundation | **COMPLETE** on `cline/M0-006-hermes-bridge` (299 unit + 12 instrumented) |
+| M0-007 / M1 | NOT STARTED |
 
 M0-001 established (do not redo): JDK 17.0.20.1 Temurin, AGP 8.7.3,
 Gradle 8.10.2, Kotlin 2.0.21, KSP 2.0.21-1.0.28, Hilt 2.51.1,
@@ -185,3 +186,34 @@ target.
   is a stub. `EmbeddedPythonRuntimeBackend` is an explicitly UNSUPPORTED
   experimental stub. The Hermes bridge is contract/stub only.
 - Hermes output is treated as an untrusted request (S8).
+
+## M0-006 Hermes bridge foundation
+
+Audited upstream `NousResearch/hermes-agent` @ `eaecc99c` (the plan's
+"v0.20.5" does not exist; tags are date-based). See
+`docs/HERMES_UPSTREAM_AUDIT_M0-006.md`.
+
+Architecture, one direction per layer:
+
+```
+HermesRuntime -> HermesBridge -> HermesProtocolAdapter -> HermesTransport -> gateway
+```
+
+- Transport: newline-delimited JSON, matching upstream `serialize_frame`.
+- Protocol: JSON-RPC 2.0; `extra="forbid"` upstream, so unspecified params are
+  omitted rather than sent as null.
+- Session: five distinct ids (harness task, harness session, Hermes runtime id,
+  Hermes stored/durable id, JSON-RPC request id) modelled explicitly.
+- Streaming: `message.delta` mapped incrementally; `gateway.ready` is the
+  handshake; `session.events.since` + `replay_epoch` drive reconnect.
+- Server->client requests (`clarify`, `approval`, `sudo`, `secret`, `vault.*`)
+  are genuine request/response and are correlated, never faked as notifications.
+
+Security: `reasoning.delta` / `reasoning.available` / `thinking.delta` and the
+`reasoning` field on `message.complete` are dropped in the adapter and never
+reach the EventBus. Credential requests are never auto-answered. The bridge
+holds no CapabilityManager, TrustedPolicyEngine, WorkspaceBroker or
+ProcessManager.
+
+No Hermes core was rewritten, no second agent loop was created, and no runtime
+was packaged. No claim is made that Hermes runs anywhere yet.

@@ -325,3 +325,34 @@ overrides `credential.helper` with a function that reads `$GITHUB_TOKEN`.
 This disables Git Credential Manager and makes every push depend on an
 out-of-band environment variable. Not a repository leak, but a reliability
 and blast-radius risk. See `docs/GITHUB_AUTH_SETUP.md` §4.
+
+## M0-006 Hermes bridge foundation
+
+**Branch**: `cline/M0-006-hermes-bridge` (from develop @ `8e32a58`)
+**Status**: complete, on branch - not yet merged to develop
+
+### Upstream
+NousResearch/hermes-agent @ `eaecc99c7ec5b6f37e880a0b69d16871cd3e4f57`.
+The project's "v0.20.5" reference is wrong; upstream tags are date-based.
+
+### Delivered
+- `HermesTransport` + newline-framed `HermesFraming` (upstream `serialize_frame`)
+- `HermesProtocolAdapter`: encode/decode, typed results, CoT filtering
+- `HermesBridge`: correlation, timeouts, cancellation, server requests, replay
+- `HermesBridgeError`: 9 typed failures, upstream code/message preserved
+- `HermesSessionRef`: the five-id mapping, incl. the live-vs-stored trap
+- `FakeHermesTransport` for tests
+- `BridgeBackedHermesRuntime`: adapts the bridge to the M0-004 contract
+
+### Validation
+- 299 unit tests, 0 failures, 2 skipped (120 new for M0-006)
+- 12 instrumented tests on 24069RA21C / Android 16
+- assembleDebug green
+- Static scan: no process exec, no filesystem, no network, no new permissions
+
+### Not done (by design)
+No Termux, no embedded Python, no Chaquopy, no Node, no Hermes on device,
+no MCP, no plugins. Hermes does not run yet and is not claimed to.
+
+### GPT review
+GPT_ADVISOR_UNAVAILABLE - no second model is callable in this environment.
