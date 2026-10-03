@@ -1,6 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!--
+      M0-008A: Termux inter-app bridge.
+
+      Termux 0.118.3 exposes exactly one service other apps may call,
+      com.termux/.app.RunCommandService, guarded by this custom permission.
+      Declaring it lets the Harness *ask* Termux to run something in Termux'
+      own sandbox; the permission is `dangerous`, so the user still decides.
+
+      This does NOT by itself grant any filesystem access. Termux' sandbox
+      stays Termux'; the Harness gains a request channel, not a data channel.
+      Workspace authorisation remains an Android-side concern.
+
+      Verified against termux/termux-app @ v0.118.3
+      (see docs/M0-008A_TERMUX_IPC_BOUNDARY_AUDIT.md).
+    -->
+    <uses-permission android:name="com.termux.permission.RUN_COMMAND" />
+
     <application
         android:name=".HarnessApplication"
         android:allowBackup="false"
