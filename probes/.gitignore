@@ -1,0 +1,4 @@
+# Rebuilt native wheels are large binary build artifacts, not source.
+# Rebuild them using the documented NDK/Rust procedure in
+# docs/M0-008I_NATIVE_WHEEL_RECONSTRUCTION.md
+native-wheels/*.whl

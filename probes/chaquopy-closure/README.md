@@ -1,30 +1,33 @@
-# Chaquopy Closure Probe - NON-PRODUCTION (M0-008H)
+# Chaquopy Closure Probe - NON-PRODUCTION (M0-008H / M0-008I)
 
-Throwaway feasibility artifact. NOT part of the production app. Never ship.
+Throwaway feasibility artifacts. NOT part of the production app. Never ship.
 
-## Result: BUILD FAILS - closure blockers identified
+## M0-008H result: dependency closure FAILS
 
-Chaquopy 17.0.0 + Python 3.14 + arm64-v8a. The Hermes @ eaecc99c closure
-cannot be built. See `docs/M0-008H_CHAQUOPY_DEPENDENCY_CLOSURE.md`.
+Chaquopy 17.0.0 + Python 3.14 + arm64-v8a cannot install the Hermes @ eaecc99c
+closure. See docs/M0-008H_CHAQUOPY_DEPENDENCY_CLOSURE.md.
 
-Verified blockers (pip --only-binary=:all: --platform android_34_arm64_v8a):
+## M0-008I result: wheels ARE rebuildable
 
-| Dependency | Reason |
-|---|---|
-| firecrawl-anydoc==0.2.4 | not on PyPI at all |
-| cryptography==50.0.1 | no android wheel |
-| httptools | no android wheel |
-| watchfiles | no android wheel |
-| Pillow==12.3.0 | no android wheel |
-| pynacl | no android wheel |
-| jiter (via openai) | no android wheel |
-| pydantic-core (via pydantic) | no android wheel |
-| pillow-heif | absent from Chaquopy native index |
-| resvg-py | absent from Chaquopy native index |
+`probes/native-wheels/pydantic_core-2.46.4-cp314-cp314-android_24_arm64_v8a.whl`
+was cross-compiled from the official PyPI sdist using NDK r27c + Rust 1.99 and
+is accepted by Chaquopy's pip. See
+docs/M0-008I_NATIVE_WHEEL_RECONSTRUCTION.md.
 
-Structural blocker: Chaquopy's native repository (chaquo.com/pypi-13.1) has
-**no cp314 Android wheels at all** - shipped ABI tags stop at cp313.
+It builds, packages, installs and reaches the device, but `dlopen` fails with
+`cannot locate symbol "PyLong_Type"`. The probe throws on that state so it can
+never report a false pass.
 
-The `install(...)` lines for known-blocked packages were removed so the probe
-documents the *remaining* resolution, not a patched fake-green closure. No
-package was modified or vendored to force success.
+The rebuilt wheel is a large binary artifact and is NOT committed. Rebuild it
+with the documented NDK/Rust/stub-library procedure instead.
+
+### Android linking requirements that are not in Chaquopy's docs
+
+1. Android ships no `libpython3.X.so`. Link against a generated empty stub with
+   the correct `-soname`.
+2. Android has no standalone `libunwind.so` since API 24; stub it too.
+3. `--as-needed` drops the Python library unless you pass `-Wl,--no-as-needed`
+   followed by `-lpython3.X` and then `-Wl,--as-needed`. Skipping this yields a
+   `.so` with no Python DT_NEEDED and a confusing runtime symbol error.
+4. The wheel platform tag must be `android_<api>_<abi>`, e.g.
+   `android_24_arm64_v8a`. `linux_aarch64` is rejected by pip.

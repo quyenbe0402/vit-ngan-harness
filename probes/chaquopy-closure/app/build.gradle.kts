@@ -25,6 +25,8 @@ android {
     }
 }
 
+val localWheelDir = file("$rootDir/../native-wheels")
+
 chaquopy {
     // Chaquopy plugin version 17.0.0 is pinned exactly in build.gradle.kts.
     defaultConfig {
@@ -33,6 +35,11 @@ chaquopy {
         // Installing on 3.13 would silently drop every dependency.
         version = "3.14"
         buildPython = listOf("C:/Users/ADMIN/AppData/Roaming/uv/python/cpython-3.14.6-windows-x86_64-none/python.exe")
+        pip {
+            // Self-rebuilt Android arm64 cp314 wheel (M0-008I).
+            // Wheel tag android_24_arm64_v8a matches Chaquopy's own naming.
+            install("pydantic_core @ file:///" + localWheelDir.toPath().resolve("pydantic_core-2.46.4-cp314-cp314-android_24_arm64_v8a.whl").toString().replace("\\", "/").removePrefix("C:/").let { "C:/" + it })
+        }
     }
     sourceSets {
         getByName("main") { srcDir("src/main/python") }
@@ -43,33 +50,6 @@ chaquopy {
             // NOTE: psutil for sys_platform == "android" is declared upstream as a
             // git VCS dependency. It is deliberately included here to capture the
             // real failure rather than to hide it.
-            install("psutil @ git+https://github.com/giampaolo/psutil.git@380bd2b59c67b0e1b04bbf3a90b11744f4f96644")
-            install("certifi==2026.5.20")
-            install("truststore==0.10.4")
-            install("python-dotenv==1.2.2")
-            install("fire==0.7.1")
-            install("httpx[socks]==0.28.1")
-            install("rich==14.3.3")
-            install("tenacity==9.1.4")
-            install("tomli-w==1.2.0")
-            install("ruamel.yaml==0.18.16")
-            install("requests==2.33.0")
-            install("jinja2==3.1.6")
-            install("pydantic==2.13.4")
-            install("prompt_toolkit==3.0.52")
-            install("croniter==6.0.0")
-            install("snowballstemmer==3.1.1")
-            install("packaging==26.0")
-            install("Markdown==3.10.2")
-            install("PyJWT[crypto]==2.13.0")
-            install("urllib3>=2.7.0,<3")
-            install("websockets==15.0.1")
-            install("browser-harness==0.1.13")
-            install("pathspec==1.1.1")
-            install("fastapi>=0.104.0,<1")
-            install("uvicorn>=0.31.0,<1")
-            install("python-multipart>=0.0.9,<1")
-            install("ptyprocess>=0.7.0,<1")
         }
     }
 }
