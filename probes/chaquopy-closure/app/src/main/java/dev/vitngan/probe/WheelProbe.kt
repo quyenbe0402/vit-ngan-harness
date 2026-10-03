@@ -1,27 +1,34 @@
 package dev.vitngan.probe
 
 import android.content.Context
+import android.util.Log
 import com.chaquo.python.Python
 import com.chaquo.python.android.AndroidPlatform
 
 /**
- * NON-PRODUCTION feasibility probe (M0-008I).
- * Loads a self-rebuilt Android arm64 cp314 wheel and runs a real native
- * operation inside it, not merely an import.
+ * NON-PRODUCTION diagnostic probe (M0-008J).
+ * Reports the Chaquopy native loader contract and then exercises the
+ * self-rebuilt extension. Diagnostic experiment only.
  */
 class WheelProbe(private val ctx: Context) {
+
+    fun diag(): String {
+        if (!Python.isStarted()) Python.start(AndroidPlatform(ctx))
+        val py = Python.getInstance()
+        val res = py.getModule("loader_diag")!!.get("run")!!.call()!!.toString()
+        Log.i("M0_008J_LOADER", "\n" + res)
+        return res
+    }
 
     fun run(): String {
         if (!Python.isStarted()) Python.start(AndroidPlatform(ctx))
         val py = Python.getInstance()
-        // Load the real probe module shipped in the APK, so this exercises
-        // module resolution and native loading the same way Hermes would.
         val mod = py.getModule("probe_native")
         val result = mod.get("run")!!.call()!!.toString()
-        // Fail loudly: a swallowed ImportError would make this probe look
+        // Fail loudly. A swallowed ImportError would make this probe look
         // green while proving nothing.
         if (result.contains("IMPORT=FAIL")) {
-            throw IllegalStateException("rebuilt wheel did not load:\n" + result)
+            throw IllegalStateException("rebuilt extension did not load:\n" + result)
         }
         if (!result.contains("NATIVE_OP=OK")) {
             throw IllegalStateException("native operation did not succeed:\n" + result)
