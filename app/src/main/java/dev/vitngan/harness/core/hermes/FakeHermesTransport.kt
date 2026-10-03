@@ -12,6 +12,7 @@ import kotlinx.coroutines.channels.Channel
 class FakeHermesTransport(
     /** When false, [send] refuses exactly like a peer that has gone away. */
     private val acceptSends: Boolean = true,
+    override val kind: HermesTransportKind = HermesTransportKind.STDIO,
 ) : HermesTransport {
 
     /** Every frame the bridge has written, in order. */
@@ -56,9 +57,37 @@ class FakeHermesTransport(
     fun anySentContaining(needle: String): Boolean = sentFrames.any { it.contains(needle) }
 
     companion object {
-        /** A gateway.ready notification frame, as written by upstream. */
+        /**
+         * The real `gateway.ready` frame captured from a live Hermes stdio
+         * gateway during M0-007B (`docs/M0-007B_TERMUX_REAL_WORLD_SPIKE.md`).
+         *
+         * Faithful to the observed wire shape, which differs from what M0-006
+         * originally assumed in three ways:
+         *
+         *  1. The envelope method is the literal `"event"`. The event name is
+         *     **not** there - it lives in `params.type`.
+         *  2. `params` carries `type` *and* `payload`; the payload alone is not
+         *     the whole frame.
+         *  3. `skin` is a full theme object (10 keys, 28 colours), not just a
+         *     name.
+         *
+         * `heartbeat` is deliberately absent: it is emitted on the WebSocket
+         * path (`tui_gateway/ws.py`) but not on stdio (`tui_gateway/entry.py`),
+         * so adding it would misrepresent this transport.
+         */
         fun readyFrame(replayEpoch: String = "epoch-1"): String =
-            """{"jsonrpc":"2.0","method":"gateway.ready","params":{"payload":""" +
-                """{"skin":{"name":"default"},"change_events":true,"replay_epoch":"$replayEpoch"}}}"""
+            """
+            {"jsonrpc": "2.0", "method": "event", "params": {"type": "gateway.ready",
+             "payload": {"skin": {"name": "default", "colors": {"banner_border": "#CD7F32",
+             "banner_title": "#FFD700", "ui_accent": "#FFBF00", "ui_ok": "#4caf50",
+             "ui_error": "#ef5350", "ui_warn": "#ffa726"}, "light_colors": {"banner_title": "#C8961E",
+             "ui_accent": "#D89B04", "ui_ok": "#2E7D32"}, "dark_colors": {},
+             "branding": {"agent_name": "Hermes Agent",
+             "welcome": "Welcome to Hermes Agent! Type your message or /help for commands.",
+             "goodbye": "Goodbye! ☤", "response_label": " ☤ Hermes ", "prompt_symbol": "❯",
+             "help_header": "(^_^)? Available Commands"}, "banner_logo": "", "banner_hero": "",
+             "tool_prefix": "┊", "help_header": "(^_^)? Available Commands", "customCSS": ""},
+             "change_events": true, "replay_epoch": "$replayEpoch"}}}
+            """.trimIndent().replace("\n", "")
     }
 }

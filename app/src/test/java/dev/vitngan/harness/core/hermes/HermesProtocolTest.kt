@@ -67,7 +67,7 @@ class HermesProtocolTest {
     @Test
     fun `gateway ready is decoded from the upstream payload shape`() {
         val inbound = HermesFraming.decode(
-            """{"jsonrpc":"2.0","method":"gateway.ready","params":{"payload":""" +
+            """{"jsonrpc":"2.0","method":"event","params":{"type":"gateway.ready","payload":""" +
                 """{"skin":{"name":"default"},"change_events":true,"replay_epoch":"ep-7","heartbeat":true}}}""",
         )
         val ready = adapter.ready((inbound as HermesInbound.Notification).payload)
@@ -164,9 +164,73 @@ class HermesProtocolTest {
     @Test
     fun `null is distinguishable from absent for heartbeat`() {
         val inbound = HermesFraming.decode(
-            """{"method":"gateway.ready","params":{"payload":""" +
+            """{"method":"event","params":{"type":"gateway.ready","payload":""" +
                 """{"replay_epoch":"e","change_events":true,"heartbeat":null}}}""",
         )
         assertNull(adapter.ready((inbound as HermesInbound.Notification).payload)!!.heartbeat)
+    }
+
+    // ── M0-007B real-frame fixtures ──────────────────────────────────────────
+    //
+    // These pin the fixture to what a live Hermes stdio gateway actually sent.
+    // If readyFrame() ever reverts to the pre-fix shape, these fail.
+
+    @Test
+    fun `the ready fixture reproduces the real observed stdio frame`() {
+        val frame = FakeHermesTransport.readyFrame()
+
+        assertTrue("envelope method is the literal event", frame.contains(""""method": "event""""))
+        assertFalse(
+            "the event name must not sit in the envelope method",
+            frame.contains(""""method": "gateway.ready""""),
+        )
+        assertTrue("event name lives in params.type", frame.contains(""""type": "gateway.ready""""))
+        assertTrue("payload is nested under params", frame.contains(""""payload""""))
+        assertTrue("change_events is present", frame.contains(""""change_events": true"""))
+        assertTrue("replay_epoch is present", frame.contains(""""replay_epoch""""))
+        assertTrue("skin is a full theme object", frame.contains(""""tool_prefix""""))
+        assertTrue("skin carries branding", frame.contains(""""branding""""))
+    }
+
+    @Test
+    fun `the stdio ready fixture omits heartbeat because ws only emits it`() {
+        // tui_gateway/entry.py omits heartbeat; tui_gateway/ws.py sets it true.
+        assertFalse(
+            "a stdio fixture claiming heartbeat would misrepresent the transport",
+            FakeHermesTransport.readyFrame().contains("heartbeat"),
+        )
+    }
+
+    @Test
+    fun `the real ready frame decodes to the gateway_ready notification`() {
+        val inbound = HermesFraming.decode(FakeHermesTransport.readyFrame())
+        assertTrue(
+            "the real frame must decode as a notification, not be dropped",
+            inbound is HermesInbound.Notification,
+        )
+        val notification = inbound as HermesInbound.Notification
+        assertEquals(HermesProtocol.Event.GATEWAY_READY, notification.method)
+        assertEquals("epoch-1", notification.payload.stringOrNull("replay_epoch"))
+        assertEquals(true, notification.payload.booleanOrNull("change_events"))
+    }
+
+    @Test
+    fun `a real event frame is never routed to a method literally named event`() {
+        val inbound = HermesFraming.decode(FakeHermesTransport.readyFrame())
+        val notification = inbound as HermesInbound.Notification
+        assertFalse(
+            "that mis-routing was the original M0-006 defect",
+            notification.method == HermesProtocol.METHOD_EVENT,
+        )
+        assertEquals(HermesProtocol.Event.GATEWAY_READY, notification.method)
+    }
+
+    @Test
+    fun `an event frame without params_type is rejected rather than guessed`() {
+        val inbound = HermesFraming.decode("""{"jsonrpc":"2.0","method":"event","params":{}}""")
+        assertTrue(
+            "an unnamed event frame must not be silently accepted",
+            inbound is HermesInbound.Ignored,
+        )
     }
 }

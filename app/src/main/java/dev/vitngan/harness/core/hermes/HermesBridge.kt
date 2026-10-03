@@ -95,11 +95,21 @@ class PendingServerRequest(
     }
 }
 
-/** Connection state as the bridge sees it. */
+/**
+ * Connection state as the bridge sees it.
+ *
+ * `WAITING_FOR_READY` is a real, non-optional step: a live transport is not the
+ * same thing as a live Hermes. Only the observed `gateway.ready` event moves
+ * the bridge to [READY].
+ */
 enum class HermesBridgeState {
     DISCONNECTED,
     CONNECTING,
-    AWAITING_READY,
+
+    /** Transport is up; nothing has proved Hermes is. */
+    WAITING_FOR_READY,
+
+    /** The gateway's own `gateway.ready` event was observed. */
     READY,
 }
 
@@ -163,14 +173,37 @@ class HermesBridge(
 
     // ── lifecycle ────────────────────────────────────────────────────────────
 
+    /**
+     * Brings the transport up and begins waiting for the gateway.
+     *
+     * Readiness is **transport semantic**. On stdio this writes nothing at all:
+     * upstream has no `gateway.ping` handler in `tui_gateway/entry.py`, so
+     * probing with it produces `-32601 unknown method` on a real gateway. The
+     * proof of readiness is the gateway's own `gateway.ready` event, which
+     * [accept] promotes to [HermesBridgeState.READY].
+     *
+     * A live transport is deliberately not treated as a ready Hermes: the
+     * bridge stays in [HermesBridgeState.WAITING_FOR_READY] until the gateway
+     * says so.
+     */
     fun connect() {
         if (!transport.isOpen) throw HermesBridgeError.TransportUnavailable()
         state = HermesBridgeState.CONNECTING
-        state = HermesBridgeState.AWAITING_READY
-        // gateway.ready is what promotes the bridge to READY; the ping is only
-        // a liveness probe, not the handshake.
-        transport.send(adapter.gatewayPing())
+
+        // Only transports whose upstream actually implements a probe may send
+        // one. STDIO resolves to ReadyEventOnly and therefore sends nothing.
+        if (transport.healthStrategy.sendsProbe) {
+            transport.send(adapter.gatewayPing())
+        }
+
+        state = HermesBridgeState.WAITING_FOR_READY
     }
+
+    /** Which readiness contract this bridge is honouring. */
+    fun healthStrategy(): TransportHealthStrategy = transport.healthStrategy
+
+    /** The upstream transport this bridge speaks. */
+    fun transportKind(): HermesTransportKind = transport.kind
 
     fun disconnect() {
         synchronized(lock) {

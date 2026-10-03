@@ -24,8 +24,28 @@ object HermesProtocol {
         const val SESSION_STATUS = "session.status"
         const val SESSION_EVENTS_SINCE = "session.events.since"
         const val PROMPT_SUBMIT = "prompt.submit"
+
+        /**
+         * WebSocket-only liveness probe.
+         *
+         * Answered in `tui_gateway/ws.py` with `{"result": {"ok": true}}`. There
+         * is **no** such handler in `tui_gateway/entry.py` (stdio); a live stdio
+         * gateway returns `-32601 unknown method`. It must never be sent over
+         * stdio.
+         */
         const val GATEWAY_PING = "gateway.ping"
     }
+
+    /**
+     * Envelope method used by the real gateway for every notification.
+     *
+     * The event name is NOT here - it is in `params.type`. Verified against
+     * `tui_gateway/entry.py` and `tui_gateway/ws.py`, which both emit
+     * `{"jsonrpc":"2.0","method":"event","params":{"type":<name>,"payload":{...}}}`,
+     * and `event_replay._stamp_event`, which returns early unless
+     * `obj["method"] == "event"`. Confirmed against a live gateway in M0-007B.
+     */
+    const val METHOD_EVENT = "event"
 
     /** Events M0-006 consumes. Subset of the 60 declared upstream. */
     object Event {

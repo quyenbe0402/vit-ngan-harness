@@ -5,6 +5,52 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 
 /**
+ * Which upstream gateway transport this client speaks.
+ *
+ * The two are not interchangeable: upstream ships genuinely different method
+ * catalogs on each, so health and readiness cannot be one universal notion.
+ */
+enum class HermesTransportKind {
+    /** `tui_gateway.entry` over the process' stdin/stdout. */
+    STDIO,
+
+    /** `tui_gateway.ws` over a WebSocket. */
+    WEBSOCKET,
+}
+
+/**
+ * How a transport proves the peer is actually up.
+ *
+ * This exists because a single "health probe" was wrong: M0-006 sent
+ * `gateway.ping` to every transport, and a real stdio gateway answers
+ * `-32601 unknown method` because that handler only exists in `ws.py`.
+ *
+ * Each case names the upstream evidence it rests on, so a future reader can
+ * re-verify rather than take it on faith.
+ */
+sealed class TransportHealthStrategy {
+    /**
+     * Readiness is the observed `gateway.ready` event; no probe is sent.
+     *
+     * Correct for stdio, where no ping method exists. `gateway.ready` is emitted
+     * as the first frame by `tui_gateway/entry.py`, and has the identical shape
+     * on the WebSocket path, so it is the one readiness signal valid everywhere.
+     */
+    data object ReadyEventOnly : TransportHealthStrategy()
+
+    /**
+     * Readiness additionally uses `gateway.ping`, verified in `tui_gateway/ws.py`.
+     *
+     * Kept for the WebSocket path only. Not available on stdio.
+     */
+    data object PingProbe : TransportHealthStrategy()
+
+    /** True when this strategy writes a probe frame during connect. */
+    val sendsProbe: Boolean
+        get() = this is PingProbe
+}
+
+/**
  * Frame transport for the Hermes bridge.
  *
  * Deliberately the narrowest possible surface: it moves already-encoded frames
@@ -16,6 +62,22 @@ import kotlinx.serialization.json.JsonPrimitive
  * layer has to.
  */
 interface HermesTransport {
+
+    /** Which upstream gateway transport this is. Drives readiness semantics. */
+    val kind: HermesTransportKind
+
+    /**
+     * How this transport proves readiness.
+     *
+     * Must be derived from what upstream actually supports on [kind] - see
+     * [TransportHealthStrategy].
+     */
+    val healthStrategy: TransportHealthStrategy
+        get() = when (kind) {
+            // Conservative default: never send a probe that may not exist.
+            HermesTransportKind.STDIO -> TransportHealthStrategy.ReadyEventOnly
+            HermesTransportKind.WEBSOCKET -> TransportHealthStrategy.PingProbe
+        }
 
     /** False when the peer is gone, matching upstream Transport.write. */
     fun send(frame: String): Boolean
@@ -66,8 +128,11 @@ object HermesFraming {
         // Upstream ids are strings or numbers; both correlate.
         val id = root["id"].asRawString()
 
-        // A response frame: has "result" or "error" and no "method".
-        if (root["method"] == null) {
+        val method = root["method"].asString()
+        val params = root["params"].asObject() ?: HermesJson.emptyObject()
+
+        // A response frame: no method, and carries "result" or "error".
+        if (method == null) {
             val error = root["error"].asObject()
             if (error != null) {
                 return HermesInbound.Error(
@@ -86,13 +151,20 @@ object HermesFraming {
             return HermesInbound.Ignored("response frame without result or id")
         }
 
-        val method = root["method"].asString()
-            ?: return HermesInbound.Ignored("method is not a string")
-
-        val params = root["params"].asObject() ?: HermesJson.emptyObject()
+        // The real gateway wraps every notification as method="event" and puts
+        // the event name in params.type (verified against tui_gateway
+        // event_replay._stamp_event and against a live gateway in M0-007B).
+        // Treating "event" as the event name would route every notification to a
+        // method literally named "event", so it is unwrapped here.
+        if (method == HermesProtocol.METHOD_EVENT) {
+            if (id != null) return HermesInbound.Ignored("event frame must not carry an id")
+            val eventName = params.stringOrNull("type")
+                ?: return HermesInbound.Ignored("event frame without params.type")
+            return HermesInbound.Notification(eventName, payloadOf(params))
+        }
 
         // id present => a server->client request that needs a correlated answer.
-        // No id => a notification.
+        // No id => a notification named by its method.
         return if (id != null) {
             HermesInbound.ServerRequest(HermesRequestFrame(id, method, params))
         } else {

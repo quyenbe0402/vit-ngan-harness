@@ -10,8 +10,21 @@
 > **Primary IDE:** Android Studio  
 > **Android language:** Kotlin  
 > **UI:** Jetpack Compose  
-> **Agent core reference:** `NousResearch/hermes-agent` v0.20.5  
-> **Current Hermes upstream commit:** `13f4cfebfa`
+> **Agent core reference:** `NousResearch/hermes-agent` @ `eaecc99c` (audited)  
+> **Hermes version scheme:** date-based tags (`v2026.9.24`, `v2026.9.21`, …) — there is **no** `v0.20.5`; that reference was wrong and has been removed  
+> **Audited upstream commit (integration target):** `eaecc99c7ec5b6f37e880a0b69d16871cd3e4f57`  
+> **Upstream `main` moves independently:** re-audit before each upgrade; the pin, not `main`, is what this project integrates
+
+**Version resolution — three distinct things, do not conflate them:**
+
+| Concept | Value | Meaning |
+|---|---|---|
+| Audited upstream revision | `eaecc99c` | The exact source M0-006 was implemented and tested against |
+| Upstream moving head | `main` @ `eaecc99c` as of 2026-10-03 | Where upstream is *now*; not a contract |
+| Project integration target | pinned to `eaecc99c` | What this codebase builds against until re-audited |
+
+No semantic version is asserted for `eaecc99c`: upstream does not publish one for
+that commit. See `docs/HERMES_UPSTREAM_AUDIT_M0-006.md`.
 
 ---
 
@@ -705,13 +718,13 @@ HermesAndroid/
 
 ## Hermes
 
-- Hermes Agent v0.20.5
-- upstream commit `13f4cfebfa`
-- Python 3.13.15
-- uv 0.11.31
-- Node.js 24.18.0
-- Git 2.55.0.windows.3
-- Git LFS 3.7.1
+- **Integration target:** upstream commit `eaecc99c7ec5b6f37e880a0b69d16871cd3e4f57` (audited 2026-10-03)
+- **Version scheme:** date-based tags (`v2026.9.24`, `v2026.9.21`, `v2026.9.14`, …). No `v0.20.5` exists; no semantic version is claimed for `eaecc99c`.
+- **Runtime requirements at that commit** (from `.python-version` / `.nvmrc`): Python **3.14**, Node **26**
+
+> The Python 3.13.15 / Node 24.18.0 figures previously listed here described a
+> different, unaudited revision (`13f4cfebfa`) and did not match the audited
+> source. Corrected to the values actually found upstream.
 
 ## Existing Android test project
 

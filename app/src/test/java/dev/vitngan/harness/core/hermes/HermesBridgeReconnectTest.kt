@@ -142,7 +142,7 @@ class HermesBridgeReconnectTest {
         val bridge = bridge(FakeHermesTransport())
         assertEquals(HermesBridgeState.DISCONNECTED, bridge.state)
         bridge.connect()
-        assertEquals(HermesBridgeState.AWAITING_READY, bridge.state)
+        assertEquals(HermesBridgeState.WAITING_FOR_READY, bridge.state)
         ready(bridge)
         assertEquals(HermesBridgeState.READY, bridge.state)
     }
