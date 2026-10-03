@@ -40,6 +40,12 @@ chaquopy {
             // Wheel tag android_24_arm64_v8a matches Chaquopy's own naming.
             install("typing-extensions>=4.12")
             install("pydantic_core @ file:///" + localWheelDir.toPath().resolve("pydantic_core-2.46.4-cp314-cp314-android_24_arm64_v8a.whl").toString().replace("\\", "/").removePrefix("C:/").let { "C:/" + it })
+            // M0-008L-F: cryptography 50.0.1 rebuilt for Android arm64 / CPython 3.14,
+            // linked against the Chaquopy 17.0 runtime libs
+            // (libpython3.14.so, libssl_python.so, libcrypto_python.so).
+            // Package contents are the official cryptography 50.0.1 wheel verbatim;
+            // only the native module was replaced.
+            install("cryptography @ file:///" + localWheelDir.toPath().resolve("cryptography-50.0.1-cp37-abi3-android_24_arm64_v8a.whl").toString().replace("\\", "/").removePrefix("C:/").let { "C:/" + it })
         }
     }
     sourceSets {

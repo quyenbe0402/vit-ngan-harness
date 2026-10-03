@@ -26,4 +26,16 @@ class WheelProbeInstrumentedTest {
         println(out)
         println("M0_008J_NATIVE_END")
     }
+
+    /**
+     * M0-008L-F: cryptography==50.0.1 native operation on the physical device.
+     */
+    @Test
+    fun cryptographyNativeOperation() {
+        val ctx = InstrumentationRegistry.getInstrumentation().targetContext
+        val out = WheelProbe(ctx).runCrypto()
+        println("M0_008L_F_CRYPTO_BEGIN")
+        println(out)
+        println("M0_008L_F_CRYPTO_END")
+    }
 }
