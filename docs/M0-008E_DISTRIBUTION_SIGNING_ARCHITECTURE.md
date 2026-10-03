@@ -1,5 +1,14 @@
 # M0-008E Distribution / Signing Architecture Audit
 
+> **SUPERSEDED by M0-008F (see `docs/M0-008F_TERMUX_PLUGIN_PROOF.md`).**
+>
+> The conclusion below that a matching Termux signer is *sufficient* to obtain
+> shared-UID membership is **OBSOLETE**. M0-008F installed a real plugin with a
+> bit-identical signer on the physical device and it was allocated its own appId
+> (10384), not Termux's (10361). This document is retained as historical
+> evidence. Where it says Model A is deployable, read M0-008G instead:
+> stock-Termux + external plugin is **BLOCKED**.
+
 ## 1. Current blocker
 
 M0-008D established the architecture is sound and the blocker is distribution.
