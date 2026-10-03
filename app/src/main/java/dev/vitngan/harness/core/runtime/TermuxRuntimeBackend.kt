@@ -3,11 +3,17 @@ package dev.vitngan.harness.core.runtime
 import java.util.concurrent.ConcurrentLinkedQueue
 
 /**
- * Termux-backed Hermes runtime - **stub** for M0-002.
+ * Termux-backed Hermes runtime - **stub**.
  *
- * Declares the contract and refuses to pretend it works. Nothing is launched;
- * [start] returns false and [health] stays IDLE, so no caller can mistake this
- * for a working runtime.
+ * M0-004 scope is deliberately limited. This backend:
+ *  - does NOT call `Termux:API`
+ *  - does NOT launch any external runtime
+ *  - does NOT start a background process
+ *  - does NOT shell out to anything
+ *
+ * It exists so the wiring, selection and failure paths are real and testable
+ * before any integration is written. Every entry point refuses cleanly, so no
+ * caller can mistake this for a working runtime.
  */
 class TermuxRuntimeBackend(
     private val clock: () -> Long = System::currentTimeMillis,
@@ -18,6 +24,7 @@ class TermuxRuntimeBackend(
 
     override val name: String = "termux"
 
+    /** Termux integration is not present at M0-004. */
     override fun isSupported(): Boolean = false
 
     override fun health(): RuntimeHealth = state
@@ -35,9 +42,10 @@ class TermuxRuntimeBackend(
     /** Always refuses: an unauthorised runtime must not silently accept frames. */
     override fun send(message: BridgeMessage): Boolean = false
 
-    override fun drainIncoming(): List<BridgeMessage> = incoming.toList().also { incoming.clear() }
+    override fun drainIncoming(): List<BridgeMessage> =
+        incoming.toList().also { incoming.clear() }
 
-    /** Helper for tests and future wiring. */
+    /** Test seam: inject a frame as if the runtime had produced it. */
     internal fun emitForTest(message: BridgeMessage) {
         incoming += message.copy(timestampMillis = clock())
     }

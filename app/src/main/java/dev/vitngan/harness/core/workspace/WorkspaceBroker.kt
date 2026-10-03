@@ -105,6 +105,41 @@ class WorkspaceBroker(
         return BrokerResult.Ok(canonical, allow)
     }
 
+    /**
+     * Authorises [rawPath] for exactly one capability and returns the token.
+     *
+     * This is the only way to obtain an [AuthorisedPath], and it runs the
+     * full chain: trusted policy first, then path defence. A caller cannot
+     * mint a token, and cannot ask for a capability the policy will not grant.
+     *
+     * Used by the process path so that `ProcessManager` cannot be handed a
+     * path that never went through policy (S1).
+     */
+    fun authorise(
+        packageName: String,
+        workspaceId: String,
+        rawPath: String,
+        capability: Capability,
+        nowMillis: Long = System.currentTimeMillis(),
+    ): AuthorisationResult = when (
+        val resolved = resolve(packageName, workspaceId, rawPath, capability, nowMillis)
+    ) {
+        is BrokerResult.Ok -> AuthorisationResult.Granted(
+            AuthorisedPath(
+                path = resolved.value,
+                capability = capability,
+                reason = resolved.decision.reason,
+            ),
+        )
+        is BrokerResult.Denied -> AuthorisationResult.Refused(resolved.decision)
+        is BrokerResult.PathRefused -> AuthorisationResult.PathRejected(resolved.resolution)
+        is BrokerResult.BackendFailed -> AuthorisationResult.PathRejected(
+            PathResolution.Rejected(
+                resolved.reason,
+                PathRejection.IO_ERROR,
+            ),
+        )
+    }
     /** Lists a directory after both gates pass. */
     fun list(
         packageName: String,
