@@ -30,7 +30,7 @@ Read from `pyproject.toml`, `.python-version`, `.nvmrc` at `eaecc99c`:
 
 Dependency shape is the decisive fact:
 
-- **46 core dependencies are gated on `python_version >= '3.14'`.** They are
+- **45 core dependencies are gated on `python_version >= '3.14'` — that is *all* of them.** They are
   simply not installed on an older interpreter. A 3.11/3.12/3.13 interpreter
   yields a Hermes install with no LLM client, no HTTP stack and no UI toolkit.
 - Every direct dep is exact-pinned (`==X.Y.Z`), by deliberate policy against
@@ -71,7 +71,7 @@ nodejs-lts_24.18.0-1_aarch64.deb
 ```
 
 - **Python 3.14.6 aarch64** satisfies `requires-python >=3.11,<3.15` **and**
-  satisfies the `python_version >= '3.14'` marker on all 46 gated deps.
+  satisfies the `python_version >= '3.14'` marker on all 45 gated deps.
   The version conflict that broke Termux installs earlier has since been
   resolved in Hermes' favour.
 - **Node 26.4.0 aarch64** exactly matches `.nvmrc` = 26.
@@ -124,7 +124,7 @@ This is not a close call, and the reason is the interpreter, not Python itself.
 
 ### Blocking: Python 3.14 does not exist for Android
 
-Hermes requires Python >= 3.11 and gates **46 core dependencies** on
+Hermes requires Python >= 3.11 and gates **45 core dependencies** on
 `python_version >= '3.14'`. Chaquopy targets CPython 3.8–3.13 and has no 3.14
 build. Installing a 3.13-ABI interpreter yields an install where
 `openai`, `httpx`, `requests`, `pydantic`, `rich`, `prompt_toolkit`,
@@ -272,7 +272,7 @@ concrete `TermuxTransport`, not a redesign. `HermesRuntime` keeps its stable
 shape with `TermuxRuntimeBackend` as its first concrete implementation.
 
 Rationale, strictly from the evidence above:
-1. Hermes requires Python >= 3.14 for 46 core deps; Termux ships 3.14.6 aarch64,
+1. Hermes requires Python >= 3.14 for 45 core deps; Termux ships 3.14.6 aarch64,
    in-process Android Python does not reach 3.14 at all.
 2. Hermes declares `[termux]` extras and fixes Termux installs upstream —
    Android is a supported target at this commit.

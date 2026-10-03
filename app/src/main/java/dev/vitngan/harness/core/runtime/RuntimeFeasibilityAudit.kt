@@ -54,11 +54,11 @@ object HermesRuntimeRequirements {
     /**
      * Core dependencies gated on `python_version >= '3.14'`.
      *
-     * This is the decisive number. An interpreter below 3.14 does not merely
-     * risk a bug: `openai`, `httpx`, `requests`, `pydantic`, `rich`,
-     * `prompt_toolkit`, `websockets` and others are simply not installed.
+     * This is the decisive number: it is *every* core dependency. An interpreter
+     * below 3.14 does not merely risk a bug - `openai`, `httpx`, `requests`,
+     * `pydantic`, `rich`, `prompt_toolkit`, `websockets` and the rest are not
      */
-    const val GATED_DEPS_ON_PYTHON_314 = 46
+    const val GATED_DEPS_ON_PYTHON_314 = 45
 
     /** Upstream ships `[termux]` and `[termux-all]` extras; uvloop is omitted. */
     const val HAS_TERMUX_EXTRAS = true
@@ -85,20 +85,20 @@ object RuntimeFeasibilityAudit {
             candidate = RuntimeCandidate.TERMUX,
             verdict = Feasibility.FEASIBLE,
             reason = "Termux provides Python 3.14.6 aarch64 and Node 26.4.0 aarch64, satisfying " +
-                "the audited interpreter floor and all 46 python_version>=3.14 gated " +
+                "the audited interpreter floor and all 45 python_version>=3.14 gated " +
                 "dependencies; the native closure builds from sdist in Termux's userland, " +
                 "and upstream ships [termux]/[termux-all] extras declaring Android supported.",
             evidence = listOf(
                 "Termux termux-main pool: python_3.14.6-1_aarch64.deb",
                 "Termux termux-main pool: nodejs_26.4.0-1_aarch64.deb",
-                "pyproject.toml requires-python >=3.11,<3.15 with 46 deps gated on 3.14",
+                "pyproject.toml requires-python >=3.11,<3.15 with 45 core deps gated on 3.14",
                 "upstream PR #100574 selects a supported Python on Termux",
             ),
         ),
         FeasibilityFinding(
             candidate = RuntimeCandidate.EMBEDDED_PYTHON,
             verdict = Feasibility.NOT_FEASIBLE,
-            reason = "No Android CPython runtime reaches 3.14, so the 46 gated core " +
+            reason = "No Android CPython runtime reaches 3.14, so the 45 gated core " +
                 "dependencies - including the LLM client and HTTP stack - would not be " +
                 "installed at all; the pinned native packages also publish zero Android " +
                 "wheels, and Hermes' subprocess-heavy design cannot work inside the app " +
