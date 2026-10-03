@@ -20,6 +20,35 @@ def _log(msg):
 def run():
     result = {}
 
+    # --- 0. cffi / _cffi_backend (M0-008L-G) ---------------------------
+    # cryptography 50.0.1 declares cffi>=2.0.0. Chaquopy has no cp314 cffi
+    # wheel, so cffi was rebuilt for Android arm64 against libffi 3.4.4.
+    # A real dlopen of _cffi_backend plus a real FFI call is required before
+    # cryptography is considered reachable.
+    import cffi
+    import _cffi_backend
+
+    # Real native operation through cffi -> _cffi_backend -> libffi.
+    ffi = cffi.FFI()
+    ffi.cdef("struct probe_s { int a; double b; };")
+    # Struct layout is computed inside _cffi_backend via libffi.
+    result["cffi_sizeof_struct"] = ffi.sizeof("struct probe_s")
+    if result["cffi_sizeof_struct"] != 16:
+        raise AssertionError(
+            "cffi sizeof mismatch: %r" % (result["cffi_sizeof_struct"],)
+        )
+
+    # A genuine FFI call: bind and invoke a real libc function. This
+    # exercises libffi cif/closure machinery, not just an import.
+    ffi.cdef("int getpid(void);")
+    pid = ffi.dlopen(None).getpid()
+    if not isinstance(pid, int) or pid <= 0:
+        raise AssertionError("cffi dlopen call returned %r" % (pid,))
+    result["cffi_getpid"] = pid
+    result["cffi_backend_loaded"] = _cffi_backend is not None
+    _log("CFFI_NATIVE_OK sizeof=%d getpid=%d"
+         % (result["cffi_sizeof_struct"], pid))
+
     # --- 1. Python runtime identity -------------------------------------
     import sys
 
@@ -70,7 +99,23 @@ def run():
     result["pubkey_len"] = len(pub)
 
     msg = b"M0-008L-F deterministic message"
-# --- 5. Native op B: AES-GCM encrypt/decrypt -----------------------
+    sig = key.sign(msg)
+    result["sig_len"] = len(sig)
+    key.public_key().verify(sig, msg)
+    result["sign_verify"] = "ok"
+
+    tampered_rejected = False
+    try:
+        key.public_key().verify(sig, msg + b"!")
+    except Exception as exc:  # rejection is the expected outcome
+        tampered_rejected = True
+        result["tamper_error_type"] = type(exc).__name__
+    if not tampered_rejected:
+        raise AssertionError("tampered signature was ACCEPTED")
+    result["tamper_rejected"] = True
+    _log("SIGN_VERIFY_OK tampered_rejected")
+
+    # --- 5. Native op B: AES-GCM encrypt/decrypt -----------------------
     from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
     aes_key = bytes(range(32))
@@ -137,6 +182,7 @@ def run():
 
     # --- 7. Cross-check against pure-Python hashlib --------------------
     result["hashlib_sha256"] = hashlib.sha256(plaintext).hexdigest()
+    result["NATIVE_OPERATION_OK"] = True
     _log("NATIVE_OPERATION_OK all_operations_passed")
     return result
 

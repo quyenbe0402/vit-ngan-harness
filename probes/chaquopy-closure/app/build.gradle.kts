@@ -46,6 +46,13 @@ chaquopy {
             // Package contents are the official cryptography 50.0.1 wheel verbatim;
             // only the native module was replaced.
             install("cryptography @ file:///" + localWheelDir.toPath().resolve("cryptography-50.0.1-cp37-abi3-android_24_arm64_v8a.whl").toString().replace("\\", "/").removePrefix("C:/").let { "C:/" + it })
+            // M0-008L-G: cryptography 50.0.1 declares cffi>=2.0.0 and Chaquopy has no
+            // cp314 cffi wheel. Rebuilt for Android arm64 / CPython 3.14 against
+            // libffi 3.4.4 (the exact libffi artifact Chaquopy's own build.sh uses)
+            // linked statically, so no runtime -lffi dependency is introduced.
+            install("cffi @ file:///" + localWheelDir.toPath().resolve("cffi-2.1.1-cp314-cp314-android_24_arm64_v8a.whl").toString().replace("\\", "/").removePrefix("C:/").let { "C:/" + it })
+            // cffi 2.1.1 requires pycparser; it is a pure-Python py3-none-any wheel.
+            install("pycparser==3.0")
         }
     }
     sourceSets {
