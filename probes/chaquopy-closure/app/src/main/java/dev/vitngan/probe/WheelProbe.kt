@@ -52,5 +52,21 @@ class WheelProbe(private val ctx: Context) {
         }
         return result
     }
+
+    /**
+     * M0-008M. httptools==0.8.0 rebuilt for Android arm64 / CPython 3.14.
+     * httptools is an Android-active Hermes core dependency reached via
+     * uvicorn. httptools_probe.run() raises on every failure.
+     */
+    fun runHttptools(): String {
+        if (!Python.isStarted()) Python.start(AndroidPlatform(ctx))
+        val py = Python.getInstance()
+        val result = py.getModule("httptools_probe")!!.get("run")!!.call()!!.toString()
+        Log.i("M0_008M_HTTPTOOLS", "\n" + result)
+        if (!result.contains("NATIVE_OPERATION_OK")) {
+            throw IllegalStateException("httptools native op missing:\n" + result)
+        }
+        return result
+    }
 }
 

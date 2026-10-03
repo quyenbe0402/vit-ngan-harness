@@ -53,6 +53,11 @@ chaquopy {
             install("cffi @ file:///" + localWheelDir.toPath().resolve("cffi-2.1.1-cp314-cp314-android_24_arm64_v8a.whl").toString().replace("\\", "/").removePrefix("C:/").let { "C:/" + it })
             // cffi 2.1.1 requires pycparser; it is a pure-Python py3-none-any wheel.
             install("pycparser==3.0")
+            // M0-008M: httptools is an Android-active Hermes core dependency
+            // ("httptools>=0.6.3,<0.9; python_version >= '3.14'") reached via
+            // uvicorn. Pure C/Cython, bundles llhttp + http-parser, no external
+            // native libraries.
+            install("httptools @ file:///" + localWheelDir.toPath().resolve("httptools-0.8.0-cp314-cp314-android_24_arm64_v8a.whl").toString().replace("\\", "/").removePrefix("C:/").let { "C:/" + it })
         }
     }
     sourceSets {

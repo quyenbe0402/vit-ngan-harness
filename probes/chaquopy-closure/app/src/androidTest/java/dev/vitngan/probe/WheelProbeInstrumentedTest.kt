@@ -38,4 +38,16 @@ class WheelProbeInstrumentedTest {
         println(out)
         println("M0_008L_F_CRYPTO_END")
     }
+
+    /**
+     * M0-008M: httptools native operations on the physical device.
+     */
+    @Test
+    fun httptoolsNativeOperation() {
+        val ctx = InstrumentationRegistry.getInstrumentation().targetContext
+        val out = WheelProbe(ctx).runHttptools()
+        println("M0_008M_HTTPTOOLS_BEGIN")
+        println(out)
+        println("M0_008M_HTTPTOOLS_END")
+    }
 }
