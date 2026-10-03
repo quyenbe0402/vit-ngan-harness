@@ -43,8 +43,14 @@ class HermesBridgeSessionTest {
         val bridge = HermesBridge(transport, adapter, { 1_000L }, 5_000L)
         bridge.connect()
         assertFalse(bridge.isReady)
-        assertEquals(HermesBridgeState.AWAITING_READY, bridge.state)
-        assertTrue("connect pings the gateway", transport.anySentContaining("gateway.ping"))
+        assertEquals(HermesBridgeState.WAITING_FOR_READY, bridge.state)
+        // Upstream has no gateway.ping handler on the stdio path
+        // (tui_gateway/entry.py); a live gateway answers -32601. Asserting the
+        // ping was sent would pin the bug this suite just fixed.
+        assertFalse(
+            "stdio connect must not send gateway.ping",
+            transport.anySentContaining(HermesProtocol.Method.GATEWAY_PING),
+        )
     }
 
     @Test
