@@ -76,8 +76,9 @@ These outrank all other sources of authority.
 | M0-001 Phase 0 (scaffolding) | **COMPLETE** - `0f18167` |
 | M0-002 Domain contracts + security foundation | **COMPLETE** - `676068d`, merged to develop as `99cc67d` |
 | M0-003 Persistence + eventing | **COMPLETE** - `b7b7b7e`, merged to develop as `21d0a9c` |
-| M0-004 Runtime abstraction stubs | **COMPLETE** - `5207fcf` (155 tests pass) |
-| M0-005 / M1 | NOT STARTED |
+| M0-004 Runtime abstraction stubs | **COMPLETE** - `5207fcf`, merged to develop as `0430a6e` |
+| M0-005 UI shell (Compose) | **COMPLETE** - `1defdae` (179 unit + 12 instrumented on device) |
+| M0-006 / M1 | NOT STARTED |
 
 M0-001 established (do not redo): JDK 17.0.20.1 Temurin, AGP 8.7.3,
 Gradle 8.10.2, Kotlin 2.0.21, KSP 2.0.21-1.0.28, Hilt 2.51.1,
