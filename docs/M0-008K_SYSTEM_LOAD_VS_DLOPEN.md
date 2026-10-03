@@ -259,3 +259,50 @@ closure can start growing again.
 
 Do not start the remaining native packages until a full validation cycle is
 green.
+
+
+---
+
+# ADDENDUM - Corrected binary was subsequently deployed and tested
+
+**This addendum does not rewrite anything above.** The M0-008K body is the
+historical record of that milestone and stands as written.
+
+## Superseded by later evidence
+
+| Statement in the M0-008K body | Later status |
+|---|---|
+| `NATIVE_OPERATION_RESULT` PARTIAL | **RESOLVED** - now OK |
+| `__pydantic_core_version__` missing | Root-caused: a symbol invented in the probe wheel |
+| Native operation not completed | Completed: see `docs/M0-008K_PYDANTIC_CORE_OPERATION.md` |
+
+## Old binary versus corrected binary
+
+| | SHA-256 of `_pydantic_core.so` | Built by |
+|---|---|---|
+| Stub-linked (M0-008I) | `472fa857dca2bc3f...` | M0-008I |
+| Corrected, real-libpython link | `8b2c0feb54229920...` | M0-008I correction, deployed in M0-008K |
+
+## Why M0-008J tested the wrong artefact
+
+Gradle's `installDebugPythonRequirements` was `UP-TO-DATE`, so the rebuilt
+wheel never made it into the APK. The device kept serving the previous
+stub-linked library. This is why M0-008J concluded that the symbol-type fix had
+not worked. It had worked; it simply had never been shipped.
+
+## Corrected result
+
+```
+NATIVE_IMPORT_RESULT=OK    package_version = 2.46.4
+NATIVE_OPERATION_RESULT=OK SCHEMA_BUILT=int, VALIDATOR_BUILT=SchemaValidator
+                           VALIDATE_VALID_42=42 (int)
+                           INVALID_REJECTED=yes, error_type=int_parsing
+                           SERIALIZE=b'42', ROUNDTRIP=42
+```
+
+The loader-path hypothesis is still rejected. `dlopen` and `System.load` both
+work, and always did, once the correct binary was actually deployed.
+
+## Remaining unknowns
+
+See `docs/M0-008K_PYDANTIC_CORE_OPERATION.md` sections 9 and 10.

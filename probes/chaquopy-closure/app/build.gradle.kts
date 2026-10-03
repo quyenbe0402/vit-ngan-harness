@@ -38,6 +38,7 @@ chaquopy {
         pip {
             // Self-rebuilt Android arm64 cp314 wheel (M0-008I).
             // Wheel tag android_24_arm64_v8a matches Chaquopy's own naming.
+            install("typing-extensions>=4.12")
             install("pydantic_core @ file:///" + localWheelDir.toPath().resolve("pydantic_core-2.46.4-cp314-cp314-android_24_arm64_v8a.whl").toString().replace("\\", "/").removePrefix("C:/").let { "C:/" + it })
         }
     }

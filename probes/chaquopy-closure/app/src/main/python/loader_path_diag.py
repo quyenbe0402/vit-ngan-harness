@@ -54,53 +54,55 @@ def run(path):
 
 
 def final_import():
-    """Exercise the rebuilt native extension.
+    """Full pydantic-core validation cycle through the rebuilt native .so.
 
-    The .so is loaded straight from disk with ExtensionFileLoader so that the
-    probe wheel's own __init__.py shim is bypassed entirely. The wheel binary
-    is NOT modified.
+    The package is imported normally. Nothing is mocked: schema creation,
+    SchemaValidator construction and validate_python all enter the Rust
+    extension compiled for Android arm64 CPython 3.14.
     """
     out = []
-    path = None
-    root = os.environ.get("HOME") or os.getcwd()
-    stack = [root]
-    while stack:
-        d = stack.pop()
-        try:
-            kids = os.listdir(d)
-        except OSError:
-            continue
-        for f in kids:
-            fp = os.path.join(d, f)
-            if os.path.isdir(fp):
-                if len(fp.split(os.sep)) < 14:
-                    stack.append(fp)
-            elif f == "_pydantic_core.so":
-                path = fp
-        if path:
-            break
-    if not path:
-        return "NATIVE_IMPORT_RESULT=FAIL could not locate _pydantic_core.so"
-    out.append("  loading: " + path)
     try:
-        import importlib.util
-        from importlib.machinery import ExtensionFileLoader
-        loader = ExtensionFileLoader("_pydantic_core", path)
-        spec = importlib.util.spec_from_file_location("_pydantic_core", path, loader=loader)
-        core = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(core)
-        out.append("NATIVE_IMPORT_RESULT=OK module=_pydantic_core")
-        out.append("  has_schema_validator=" + str(hasattr(core, "SchemaValidator")))
-        out.append("  version=" + str(getattr(core, "__version__", "?")))
-        schema = core.build_schema([core.CoreSchema.int_schema()])
-        v = core.SchemaValidator(schema)
-        out.append("  VALIDATE_42=" + str(v.validate_python(42)))
+        import pydantic_core
+    except BaseException as e:
+        return "NATIVE_IMPORT_RESULT=FAIL %s: %s" % (type(e).__name__, str(e)[:300])
+
+    out.append("NATIVE_IMPORT_RESULT=OK")
+    out.append("  package_version = " + str(pydantic_core.__version__))
+    out.append("  SchemaValidator = " + str(pydantic_core.SchemaValidator))
+
+    from pydantic_core import core_schema
+
+    try:
+        schema = core_schema.int_schema()
+        validator = pydantic_core.SchemaValidator(schema)
+        out.append("  SCHEMA_BUILT = " + str(schema["type"]))
+        out.append("  VALIDATOR_BUILT = " + type(validator).__name__)
+
+        good = validator.validate_python(42)
+        out.append("  VALIDATE_VALID_42 = %r (%s)" % (good, type(good).__name__))
+        if good != 42 or type(good) is not int:
+            out.append("NATIVE_OPERATION_RESULT=FAIL validator returned unexpected value")
+            return "\n".join(out)
+
+        rejected = False
         try:
-            v.validate_python("not-an-int")
-            out.append("  REJECT_BAD=NO")
-        except Exception:
-            out.append("  REJECT_BAD=YES")
+            validator.validate_python("not-an-int")
+        except pydantic_core.ValidationError as e:
+            rejected = True
+            out.append("  INVALID_REJECTED = yes")
+            out.append("  error_type = " + str(e.errors()[0].get("type")))
+        except BaseException as e:
+            out.append("  INVALID_REJECTED = wrong-exception %s" % type(e).__name__)
+        if not rejected:
+            out.append("NATIVE_OPERATION_RESULT=FAIL invalid input was NOT rejected")
+            return "\n".join(out)
+
+        # Serialisation is also native; proves more of the Rust surface.
+        ser = pydantic_core.SchemaSerializer(core_schema.int_schema())
+        js = ser.to_json(42)
+        out.append("  SERIALIZE = " + str(js))
+        out.append("  ROUNDTRIP = %r" % (pydantic_core.from_json(js),))
         out.append("NATIVE_OPERATION_RESULT=OK")
     except BaseException as e:
-        out.append("NATIVE_IMPORT_RESULT=FAIL %s: %s" % (type(e).__name__, str(e)[:300]))
+        out.append("NATIVE_OPERATION_RESULT=FAIL %s: %s" % (type(e).__name__, str(e)[:300]))
     return "\n".join(out)
