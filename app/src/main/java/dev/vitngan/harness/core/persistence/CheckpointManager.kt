@@ -1,21 +1,22 @@
 package dev.vitngan.harness.core.persistence
 
-import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicLong
 
 /**
- * Stores and restores checkpoints.
+ * Saves and restores checkpoints.
  *
- * M0-002 keeps checkpoints in memory; [AppDatabase] provides the durable store.
- * A restored payload is untrusted input and must be re-validated before use
- * (S7) - restoring a checkpoint never re-grants a capability.
+ * Backed by a [CheckpointStore], so the same logic serves the in-memory store
+ * used in tests and the Room store used on a device.
+ *
+ * Security invariant S7: a restored payload is **untrusted input**. `restore`
+ * returns the raw payload for the caller to re-validate; restoring a
+ * checkpoint never re-grants a capability and never bypasses policy.
  */
 class CheckpointManager(
-    private val database: AppDatabase? = null,
+    private val store: CheckpointStore = CheckpointStore.InMemory(),
     private val clock: () -> Long = System::currentTimeMillis,
     private val idGenerator: () -> String = { "ckpt-${counter.incrementAndGet()}" },
 ) {
-
-    private val inMemory = ConcurrentHashMap<String, Checkpoint>()
 
     fun save(
         taskId: String,
@@ -26,6 +27,7 @@ class CheckpointManager(
     ): Checkpoint {
         require(taskId.isNotBlank()) { "taskId must not be blank" }
         require(label.isNotBlank()) { "label must not be blank" }
+
         val checkpoint = Checkpoint(
             id = idGenerator(),
             taskId = taskId,
@@ -35,24 +37,48 @@ class CheckpointManager(
             payload = payload,
             parentId = parentId,
         )
-        inMemory[checkpoint.id] = checkpoint
+        store.put(checkpoint)
         return checkpoint
     }
 
-    fun get(id: String): Checkpoint? = inMemory[id]
+    fun get(id: String): Checkpoint? = store.get(id)
 
-    fun forTask(taskId: String): List<Checkpoint> =
-        inMemory.values.filter { it.taskId == taskId }.sortedBy { it.createdAtMillis }
+    fun forTask(taskId: String): List<Checkpoint> = store.forTask(taskId)
 
-    fun latestForTask(taskId: String): Checkpoint? = forTask(taskId).lastOrNull()
+    fun latestForTask(taskId: String): Checkpoint? = store.latestForTask(taskId)
 
-    fun delete(id: String): Boolean = inMemory.remove(id) != null
+    fun delete(id: String): Boolean = store.delete(id)
 
-    fun clear() = inMemory.clear()
+    fun clear() = store.clear()
 
-    fun count(): Int = inMemory.size
+    fun count(taskId: String? = null): Int = store.count(taskId)
+
+    /**
+     * Restores a checkpoint for [taskId].
+     *
+     * Refuses when the checkpoint belongs to a different task. Without this
+     * check a task could restore another task's state - a confused-deputy
+     * bug that no caller should have to guard against individually.
+     */
+    fun restore(id: String, taskId: String): Checkpoint? {
+        val checkpoint = store.get(id) ?: return null
+        if (checkpoint.taskId != taskId) return null
+        return checkpoint
+    }
+
+    /** Walk from [id] to the root, newest first. Cycle-safe. */
+    fun lineage(id: String): List<Checkpoint> {
+        val out = mutableListOf<Checkpoint>()
+        val seen = mutableSetOf<String>()
+        var current = store.get(id)
+        while (current != null && seen.add(current.id)) {
+            out += current
+            current = current.parentId?.let { store.get(it) }
+        }
+        return out
+    }
 
     private companion object {
-        val counter = java.util.concurrent.atomic.AtomicLong(0)
+        val counter = AtomicLong(0)
     }
 }
