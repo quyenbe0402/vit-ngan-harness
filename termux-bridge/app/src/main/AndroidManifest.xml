@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!--
+      M0-008F prototype bridge.
+
+      sharedUserId joins Termux' UID so this component executes inside the Termux
+      sandbox - the only context that can run Hermes. Verified target:
+      Termux v0.118.3 signed with the digest recorded in M0-008E.
+
+      The permission is a first gate only. It is `dangerous`, so the user still
+      grants it, and the service additionally pins the calling package and UID
+      at runtime. Shared-UID membership is NOT treated as caller identity.
+    -->
+    <permission
+        android:name="dev.vitngan.termuxbridge.BRIDGE"
+        android:protectionLevel="dangerous" />
+
+    <uses-permission android:name="dev.vitngan.termuxbridge.BRIDGE" />
+
+    <application
+        android:label="Vit Ngan Termux Bridge (proto)"
+        android:allowBackup="false"
+        android:sharedUserId="com.termux">
+
+        <service
+            android:name=".BridgeService"
+            android:exported="true"
+            android:permission="dev.vitngan.termuxbridge.BRIDGE" />
+    </application>
+</manifest>
