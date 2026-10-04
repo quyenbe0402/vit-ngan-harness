@@ -8,3 +8,7 @@ native-wheels/*.whl
 # secrets.env holds API keys and must never be committed.
 consult/secrets.env
 consult/*.txt
+
+# Consultation session state: full conversation transcripts. Not source, can be
+# large, and may quote code or architecture discussion.
+consult/sessions/
