@@ -49,9 +49,15 @@ The Android client does NOT:
 
 **The Hermes gateway remains the authoritative agent runtime.**
 
-The gateway binary does not change. Its address does. The same process that was
-being verified for Termux or embedded deployment is the process that runs on the
-remote host. This is a redeployment, not a rewrite.
+The gateway binary is unchanged **as of this decision**; the authentication and
+session-security changes required by OD-001 are anticipated and unscoped, and may
+modify it. The process being redeployed to the remote host is the same process
+that was being verified for Termux or embedded deployment.
+
+This is a redeployment, not a rewrite. That is a statement of **intent** - it
+describes what was chosen - and it is deliberately **not** a guarantee that the
+binary is frozen. Any implementation of OD-001 that adds authentication to the
+gateway changes it.
 
 ---
 
@@ -165,6 +171,107 @@ Recorded:
 
 ---
 
+## Local Cache Policy
+
+**Status: OPEN - not decided.**
+
+The pivot states that Android does not require a local working tree. That is a
+statement about **authority**, not about **caching**, and the distinction matters
+because it admits two very different implementations:
+
+| Question | Status |
+|---|---|
+| May Android cache file content locally so the user can read it without a network round-trip? | **OPEN** |
+| If it may, is that cache a working tree? | **OPEN** |
+| May a cached copy be edited and synced back to the remote? | **OPEN** |
+| May the cache ever hold authoritative state? | **OPEN - no. See below.** |
+
+One answer is recorded here because it follows from the Source-of-Truth Rule
+rather than from a new choice: **the local cache may never hold authoritative
+state.** The remote workspace is authoritative. A cache that became authoritative
+would be indistinguishable, to a future maintainer reading the code, from the
+on-device ownership model this pivot replaced - which is precisely the ambiguity
+that must not be reintroduced by accident.
+
+Everything else above is **OPEN** and belongs to the owner. It is not decided here
+because each option produces a materially different client: read-only caching,
+caching with write-back, and no caching at all are three different products, and
+choosing between them is a product decision rather than a documentation detail.
+
+---
+
+## Persistent Workspace Durability
+
+**Status: OPEN - guarantees are not defined.**
+
+The workspace is described as persistent. That word describes **intent**, not a
+durability contract, and the distinction is recorded because it is load-bearing:
+the remote workspace is now the only copy of the user's working tree and Git
+state.
+
+| Question | Status |
+|---|---|
+| Durability guarantee (what is the tolerated data-loss window?) | **OPEN** |
+| Backup / snapshot policy | **OPEN** |
+| Retention: how long after session end before a workspace is reclaimed? | **OPEN** |
+| Disaster recovery: what happens when the volume is lost? | **OPEN** |
+
+**Persistent does not mean undestroyable.** No claim of "cannot lose data" is made
+here. Until the rows above are answered, the honest statement is that the remote
+workspace is *intended* to persist and that its durability properties are
+undefined. Treat "persistent" as a design direction, not as a promise.
+
+---
+
+## Multi-Device
+
+**Status: OUT OF SCOPE for this decision - not ruled out.**
+
+Whether one user operating the same workspace from two devices simultaneously is
+a supported use case is **not decided**. Multi-device is not ruled out and not
+adopted.
+
+It is explicitly **dependent on OD-005**. "Two devices attached to one workspace"
+is a workspace-concurrency problem, and the concurrency policy has not been chosen.
+Claiming multi-device support before OD-005 is answered would be claiming a
+capability whose semantics are undefined.
+
+---
+
+## Requirement-Change Rule
+
+**Status: FROZEN - this defines what may reopen the decision above.**
+
+The offline-vs-remote decision is frozen. "Frozen" is only enforceable if "new
+requirement" is defined, because otherwise any agent may assert one.
+
+Version-B (embedded / full-offline) may be reopened **only** by one of:
+
+1. an explicit product requirement from the owner
+2. a customer or contract requirement for offline operation
+3. a regulatory, app-store or export-control constraint
+4. a formally approved architecture or business decision, made by the owner
+
+A developer, agent or model **may not** reopen it on the basis of:
+
+- Android embedded execution being difficult or slow
+- speculation about remote hosting cost
+- speculation about latency at scale
+- personal technical preference
+- a preference for local execution over network execution
+
+The reasoning is deliberately asymmetric. Items 1-4 are evidence that the world
+changed. The excluded items are opinions about how the changed world might be
+served, and they do not constitute a requirement. Accepting them would make the
+freeze reversible by anyone with a strong opinion, which would render it
+meaningless.
+
+**This rule is itself subject to the owner's authority.** The owner may reopen the
+decision directly. The constraint exists to stop *unauthorised* reopening, not to
+bind the owner.
+
+---
+
 ## Provenance of this decision
 
 This decision was reached after an independent technical consultation with a
@@ -185,3 +292,11 @@ and execute on the physical Android device with full artifact identity
 - `jiter 0.17.0`
 
 That is genuine, reusable, hard-won infrastructure. It is parked, not discarded.
+
+---
+
+## Provenance note
+
+How this decision was reached, and how the earlier work ended up off the critical
+path, is recorded separately in `docs/RETROSPECTIVE.md`. That document explains
+the approach only; it does not modify this decision.

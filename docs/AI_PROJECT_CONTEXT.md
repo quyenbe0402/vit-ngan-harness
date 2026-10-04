@@ -109,8 +109,18 @@ Branches: `main`, `develop`, `claude/M0-001-foundation`,
 
 Process execution goes through `ToolRouter -â€ â€™ CapabilityManager -â€ â€™
 TrustedPolicyEngine -â€ â€™ WorkspaceBroker.resolve() -â€ â€™ ProcessManager`.
-Argument lists only (S4). Termux is the intended runtime host; embedded
-CPython is declared unsupported.
+Argument lists only (S4).
+
+**CURRENT ARCHITECTURE: remote Hermes** (`docs/PIVOT-DECISION.md`, frozen).
+The Hermes gateway runs on a remote host; the Android client is a thin client
+behind `HermesTransport`. There is currently **no selected on-device runtime** -
+no Termux host and no embedded CPython.
+
+CORRECTION (2026-10-04): this section previously read "Termux is the intended
+runtime host; embedded CPython is declared unsupported." Both halves are now
+stale. Termux was frozen at M0-008G, and the embedded-CPython claim of
+unsupported was a *technical* claim that the M0-008L-G/M/O device evidence
+disproved. The accurate statement is that neither is the selected runtime.
 
 ## 10. Repository workflow
 
@@ -136,8 +146,14 @@ Inspect the diff before every commit.
 - D2: `CanonicalPath` is an opaque type constructible only by
   `SecurityPathResolver` (or trusted internal code), so an unauthorized raw
   string cannot be passed where a `CanonicalPath` is required.
-- D3: `EmbeddedPythonRuntimeBackend` is UNSUPPORTED -â‚¬â€ declared, not built.
+- D3: `EmbeddedPythonRuntimeBackend` is UNSUPPORTED by product decision - declared,
+  not built. (Corrected 2026-10-04: this was previously recorded as unsupported
+  for *technical* reasons, which the M0-008L-G/M/O device evidence disproved.)
 - D4: Hermes is stubbed, not vendored, at M0-002.
+- D5: Remote Hermes is the default architecture. See `docs/PIVOT-DECISION.md`
+  (frozen). Open questions are tracked as OD-001..OD-005 in
+  `docs/OPEN-DECISIONS.md`; execution-path classification is in
+  `docs/PIVOT_EXECUTION_AUDIT.md`.
 
 ## 13. Unresolved decisions
 

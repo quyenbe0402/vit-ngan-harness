@@ -120,3 +120,65 @@ occurs, and only by explicit owner decision.
 
 The Version-B asset that would be reactivated is preserved and documented in
 `docs/SALVAGE-INVENTORY.md` when that inventory is written.
+
+---
+
+## OD-005 — Workspace concurrency & runtime-failure state recovery
+
+**Status: OPEN**
+
+**Deliberately separate from OD-001.**
+
+OD-001 is about **transport, authentication and session security** - who may
+connect, over what channel, with which credential. OD-005 is about **workspace
+ownership and state semantics** - what happens to the workspace and the work in
+it. They must be decided independently: an answer to OD-001 does not imply an
+answer to OD-005, and vice versa. Merging them would let a transport decision
+appear to settle a data-integrity question.
+
+**Question**
+
+Given a persistent per-user workspace and an ephemeral runtime
+(`PIVOT-DECISION.md`), what are the concurrency, locking and failure-recovery
+semantics?
+
+**Open questions - none of these are answered here**
+
+*Concurrency and locking*
+
+- Is the workspace **single-writer** or does it permit concurrent writers?
+- What are the **workspace lock semantics** - advisory, mandatory, lease-based,
+  time-bounded?
+- What happens when **two devices** attach to the same workspace?
+- What happens when **two sessions** on one device attach to the same workspace?
+- Is a lock held per session, per runtime, or per workspace?
+
+*Re-attach mechanics*
+
+- How does a new runtime **identify** the workspace it should re-attach to
+  (identifier scheme, discovery, hand-off)?
+- Is a workspace lock **released** when a runtime dies, and by what mechanism -
+  crash alone, heartbeat expiry, or explicit release?
+
+*Runtime failure and orphaned work*
+
+- If a runtime dies **mid-task**, what is the state of that task?
+- Does runtime recovery **resume task state**, or does it restore only file and
+  Git state? These are different guarantees and only one may be true.
+- How are **orphaned tasks** handled - retried, abandoned, or reported as failed?
+- Is there a distinction between a task that may be safely retried and one that
+  may have partially applied its effects (for example, a half-written file or an
+  external side effect)? If so, how is that detected?
+
+**Why it matters**
+
+`PIVOT-DECISION.md` states that the runtime is disposable and the workspace
+survives. That statement is about **the workspace**, and it is currently silent
+about **the work in progress**. A user whose agent was mid-edit when the runtime
+died faces a question the pivot does not answer: was the edit applied, was it
+discarded, or is it pending? Answering "the workspace survived" without answering
+that would overstate the guarantee.
+
+**Do not choose a policy yet.** Selecting single-writer versus concurrent-writer,
+or defining retry semantics, is an owner decision with real data-loss
+implications.

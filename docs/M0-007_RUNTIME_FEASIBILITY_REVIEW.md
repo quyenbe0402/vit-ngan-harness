@@ -1,3 +1,10 @@
+> **HISTORICAL RECORD.**
+> This document records the state and evidence at the time of its milestone.
+> Its historical contents are preserved unchanged, including any conclusion
+> later overtaken by newer evidence or by the architecture pivot. Do not read
+> it as current architecture guidance.
+> Current architecture decisions are governed by `docs/PIVOT-DECISION.md`.
+
 # M0-007 Final Review — GO / NO-GO for Hermes Runtime
 
 **Reviewed revision:** `NousResearch/hermes-agent` @ `eaecc99c7ec5b6f37e880a0b69d16871cd3e4f57`

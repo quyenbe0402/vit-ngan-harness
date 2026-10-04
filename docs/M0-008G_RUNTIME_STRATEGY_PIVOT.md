@@ -1,3 +1,13 @@
+> **SUPERSEDED BY `docs/PIVOT-DECISION.md`.**
+>
+> This document records the state and evidence at the time of milestone M0-008G.
+> Its historical contents are preserved unchanged, including its conclusions about
+> Candidate A / Chaquopy. Two of those conclusions were later overtaken by the
+> M0-008L/M/O device evidence and by the architecture pivot, so **do not read this
+> document as current architecture guidance.**
+>
+> Current architecture decisions are governed by `docs/PIVOT-DECISION.md`.
+
 # M0-008G Runtime Strategy Pivot
 
 ## Headline

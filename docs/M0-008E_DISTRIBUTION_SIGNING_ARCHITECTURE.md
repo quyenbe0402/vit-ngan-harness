@@ -1,3 +1,10 @@
+> **HISTORICAL RECORD.**
+> This document records the state and evidence at the time of its milestone.
+> Its historical contents are preserved unchanged, including any conclusion
+> later overtaken by newer evidence or by the architecture pivot. Do not read
+> it as current architecture guidance.
+> Current architecture decisions are governed by `docs/PIVOT-DECISION.md`.
+
 # M0-008E Distribution / Signing Architecture Audit
 
 > **SUPERSEDED by M0-008F (see `docs/M0-008F_TERMUX_PLUGIN_PROOF.md`).**
