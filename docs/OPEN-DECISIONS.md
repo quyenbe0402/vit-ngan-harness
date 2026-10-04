@@ -182,3 +182,53 @@ that would overstate the guarantee.
 **Do not choose a policy yet.** Selecting single-writer versus concurrent-writer,
 or defining retry semantics, is an owner decision with real data-loss
 implications.
+
+---
+
+## OD-006 — Idempotent prompt submission after client death
+
+**Status: OPEN**
+
+**Raised by:** M21 Phase C, from source evidence recorded in
+`docs/HERMES_BRIDGE_SPEC.md` §18.
+
+**Question**
+
+How should the Android client handle a prompt whose outcome it cannot observe?
+After the app is killed mid-call, how does the client learn whether its
+`prompt.submit` was accepted, is in flight, or already executed — and what
+should it do about it?
+
+**Evidence from the pinned source** (Hermes `eaecc99c`)
+
+- `session.create` **has** `idempotency_key`, documented so that a retried create
+  whose response was lost in transit returns the SAME session rather than a
+  duplicate child (`tui_gateway/contracts/sessions.py:136-138`).
+- `prompt.submit` **has no equivalent**. `PromptSubmitParams`
+  (`tui_gateway/contracts/prompt_voice.py:26-51`) declares no idempotency key.
+- On WebSocket disconnect the gateway does not discard in-flight work: sessions
+  are detached to a grace-windowed orphan reaper and "a quick resume cancels it"
+  (`tui_gateway/ws.py:459-467`). The remote therefore holds state the client
+  cannot see.
+
+**Why this matters more under the remote architecture**
+
+Under the previous on-device model, a killed process lost the interpreter and its
+state together, and there was nothing left behind to reconcile. Now the agent runs
+on a remote host that outlives the client. The asymmetric outcomes are:
+
+- re-send, and the turn executes twice
+- do not re-send, and the turn is silently lost
+
+**What must be considered**
+
+- whether the client may infer state from `LiveSessionSnapshot.inflight`,
+  `queued` and `user_row_id` after a resume
+- whether `session.status` / `session.history` are sufficient to reconcile
+- whether a client-generated key could be honoured at all (the server declares no
+  contract to accept one, so a client-side dedupe key would create a false sense
+  of safety rather than a guarantee)
+- what the user is shown when the outcome is genuinely unknowable
+
+**Deliberately not solved here.** No client-side at-most-once semantics are to be
+built: the server has no contract to honour them.
