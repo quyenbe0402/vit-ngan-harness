@@ -2,3 +2,9 @@
 # Rebuild them using the documented NDK/Rust procedure in
 # docs/M0-008I_NATIVE_WHEEL_RECONSTRUCTION.md
 native-wheels/*.whl
+
+# Local AI consultation helpers and credentials.
+# ask.ps1 / consult.ps1 are tooling, not project source.
+# secrets.env holds API keys and must never be committed.
+consult/secrets.env
+consult/*.txt
