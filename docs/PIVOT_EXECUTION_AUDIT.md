@@ -69,6 +69,13 @@ the phone remains the policy authority even when the agent does not.
 
 ---
 
+
+**B-03 - `.github/workflows/ci.yml`**
+Evidence: runs `./gradlew assembleDebug` and `./gradlew testDebugUnitTest` at the
+repository root. `git grep -i 'probes|embedded|chaquopy'` over `.github` returns
+no match. CI validates the production module only and is not an embedded-Python
+path.
+
 ## C. VERSION_B_PARKED
 
 **C-01 - `probes/chaquopy-closure/` (entire tree)**
@@ -127,8 +134,61 @@ Classification **E**: Termux is neither the remote default nor part of Version-B
 third, older execution strategy.
 
 **Correction to a prior review's claim:** that review stated this permission had
-"no code references found". That is **inaccurate**. It is referenced by
-`app/src/androidTest/java/dev/vitngan/harness/TermuxIpcBoundaryTest.kt` at 7
+"no code references found". That is **inaccurate**.
+
+Search scope was widened beyond `app/src/main` after that challenge, covering all
+tracked `*.xml`, `*.kt`, `*.java` and `*.py` files, plus CI and Gradle scripts.
+Findings:
+
+- **Still declared: YES** - `app/src/main/AndroidManifest.xml:19` is the only
+  tracked manifest declaring it.
+- **7 code references**, all in
+  `app/src/androidTest/java/dev/vitngan/harness/TermuxIpcBoundaryTest.kt`
+  (lines 51, 62, 66, 69, 70, 77 and the class-level service check).
+- **Zero references** in `app/src/main`, so production behaviour does not use it.
+- No references in CI, Gradle scripts, ProGuard rules or any Python source.
+
+**Consequence: removing the permission would break an existing instrumentation
+test.** Any future removal must update `TermuxIpcBoundaryTest.kt` in the same
+change.
+
+**Requires explicit owner approval to remove.**
+
+---
+
+**E-02 - `termux-bridge/` module (7 tracked files) - MISSED BY THE FIRST AUDIT PASS**
+
+**This finding was omitted from the first version of this audit and was caught by
+an independent review, not by the original scan. Recording the omission is part of
+the finding.**
+
+Evidence: `git ls-files termux-bridge` returns 7 tracked files - `.gitignore`,
+`app/build.gradle.kts`, `app/src/main/AndroidManifest.xml`,
+`app/src/main/java/dev/vitngan/termuxbridge/BridgeService.kt`, `build.gradle.kts`,
+`gradle.properties`, `settings.gradle.kts`.
+
+Its `AndroidManifest.xml` declares `android:sharedUserId="com.termux"` on the
+`<application>` element, plus its own `dev.vitngan.termuxbridge.BRIDGE` dangerous
+permission and an exported `BridgeService`. Its own comment states the purpose:
+joining Termux' UID "is the only context that can run Hermes".
+
+**Why the first audit missed it:** the original scan covered `app/` and `probes/`
+only. `termux-bridge/` is a third top-level directory and was never in scope. This
+is a scope defect in the audit, not an oversight in the repository.
+
+Classification **E**: `sharedUserId="com.termux"` was **proven non-functional on
+Android 16 by M0-008F** - the plugin received its own UID (`uid:10384` vs Termux'
+`uid:10361`). The module implements a strategy already measured as blocked, and it
+serves neither the remote default nor Version-B.
+
+It is a **separate Gradle build** (`termux-bridge/settings.gradle.kts`) and is
+**not** referenced by the root `settings.gradle.kts`, `.github` or the root
+`build.gradle.kts`, so it does not execute in the default build. It carries its own
+`compileSdk 35` / `targetSdk 28` and reads signing material from a gitignored
+`signing.properties`.
+
+**Requires explicit owner approval to remove.** Preserved, not deleted.
+
 ---
 
 ## F. NEEDS_OWNER_DECISION
@@ -209,18 +269,64 @@ Measured baseline after the edits: `:app:testDebugUnitTest` = **348 tests,
 - The `probes/chaquopy-closure` wheel set was not rebuilt, re-verified or
   re-tested on device in this pass. Its Version-B status rests on the recorded
   milestone evidence, not on a fresh measurement.
-Evidence: `RuntimeFeasibilityAudit.kt` still names Termux as the selected
-candidate. Under the remote architecture there is no selected *on-device* runtime
-at all. The value is asserted by `RuntimeFeasibilityAuditTest.kt:26`, so it is
-unchanged in this pass and flagged for the owner.
-sites (lines 51, 62, 66, 69, 70, 77 and the class-level check). There are no
-references in `app/src/main`, so production behaviour does not use it - but
-**removing the permission would break an existing instrumentation test.** Any
-future removal must update that test in the same change.
 
-**Requires explicit owner approval to remove.**
-**B-03 - `.github/workflows/ci.yml`**
-Evidence: runs `./gradlew assembleDebug` and `./gradlew testDebugUnitTest` at the
-repository root. `git grep -i 'probes|embedded|chaquopy'` over `.github` returns
-no match. CI validates the production module only and is not an embedded-Python
-path.
+---
+
+## Correction log for THIS audit document itself
+
+An independent review challenged this audit and found three defects in it. They
+are recorded here rather than silently fixed.
+
+**1. `termux-bridge/` was missed entirely (now E-02).**
+The first scan covered `app/` and `probes/` only. `termux-bridge/` is a third
+top-level directory with 7 tracked files, including a manifest declaring
+`android:sharedUserId="com.termux"`. It was never in scan scope. That is a scope
+defect in this audit.
+
+**2. The E-01 reference search was too narrow.**
+It originally reported "no references in `app/src/main`" and left the reader to
+infer whether anything else referenced the permission. The search has since been
+widened to all tracked `*.xml`, `*.kt`, `*.java`, `*.py`, CI and Gradle files,
+and the result is now stated explicitly: still declared, 7 androidTest
+references, 0 production references.
+
+**3. The headline claim conflated two different assertions.**
+The original headline said Version-B infrastructure is not executing in the
+default path, "verified not assumed". Strictly, two distinct claims were being
+bundled:
+
+- *Verified:* `app/build.gradle.kts` contains no Chaquopy plugin, the probe is
+  excluded from the root build graph, and CI runs only the root module. These
+  are file-level facts established by reading the files.
+- *Verified by unit test:* `EmbeddedPythonRuntimeBackend` reports
+  `isSupported()=false`, `health()=UNSUPPORTED`, `start()=false`.
+- *Not verified here:* that no runtime code path anywhere would invoke this
+  backend. The unit tests assert an isolated class's return values; they do not
+  prove what a selector or dispatcher consuming those values does. No
+  instrumentation test boots the backend-selection flow.
+
+`assembleDebug = BUILD SUCCESSFUL` demonstrates compilation only and is not
+evidence of runtime behaviour. It is listed in this document as a build result,
+not as runtime evidence.
+
+**4. Weak-oracle caveat on the test result.**
+`RuntimeFeasibilityAuditTest.kt:41` asserts `finding.reason.contains("3.14")`.
+The corrected reason string deliberately retains the literal "CPython 3.14" so
+this assertion still passes. That is a **substring check**, not a semantic one:
+its passing shows the string was not emptied, and nothing more. It is not
+independent confirmation that the new reason text is accurate.
+
+**Named skipped tests.** The 2 skipped tests are both in
+`SecurityPathResolverTest` (a path-security class unrelated to any file edited
+in this pass):
+- `symlink to a directory inside the root is allowed`
+- one further symlink case in the same class
+
+None of the edited classes (`RuntimeFeasibilityAuditTest`, `RuntimeBackendTest`,
+`HermesBridgeTest`) had a skipped test, so "0 failures" is not doing less work
+than it appears to in the vicinity of these edits.
+
+**Banner-pass verification, as raw diff output rather than narration.**
+`git diff --numstat HEAD~1 HEAD -- docs/M0-*.md` shows, for all 26 files, a
+deletion count of **0**. 25 files show `7 0`; `M0-008G_RUNTIME_STRATEGY_PIVOT.md`
+shows `10 0` (it received the SUPERSEDED banner instead of the generic one).

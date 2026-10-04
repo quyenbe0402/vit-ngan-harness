@@ -184,19 +184,38 @@ because it admits two very different implementations:
 | May Android cache file content locally so the user can read it without a network round-trip? | **OPEN** |
 | If it may, is that cache a working tree? | **OPEN** |
 | May a cached copy be edited and synced back to the remote? | **OPEN** |
-| May the cache ever hold authoritative state? | **OPEN - no. See below.** |
+| May the cache ever hold authoritative state? | **OPEN - derived, not confirmed. See below.** |
 
-One answer is recorded here because it follows from the Source-of-Truth Rule
-rather than from a new choice: **the local cache may never hold authoritative
-state.** The remote workspace is authoritative. A cache that became authoritative
-would be indistinguishable, to a future maintainer reading the code, from the
-on-device ownership model this pivot replaced - which is precisely the ambiguity
-that must not be reintroduced by accident.
+### The one derived statement
 
-Everything else above is **OPEN** and belongs to the owner. It is not decided here
-because each option produces a materially different client: read-only caching,
-caching with write-back, and no caching at all are three different products, and
-choosing between them is a product decision rather than a documentation detail.
+> "The local cache may never hold authoritative state."
+
+**This is DERIVED, not independently confirmed, and the derivation is shown here
+so it can be checked rather than trusted.**
+
+The governing text, quoted verbatim from the Source-of-Truth Rule above:
+
+> "**The remote workspace is authoritative** for the active remote architecture."
+> "...Android does not require a local working tree."
+
+Derivation: a cache that held authoritative state would itself become a working
+tree, contradicting "Android does not require a local working tree"; and it would
+give the phone authority that the rule assigns to the remote workspace.
+
+**The interpretive gap, stated plainly:** the Source-of-Truth Rule was written
+about the *working tree*, and it does not mention caches explicitly. Reading
+"a cache must not become authoritative" out of it requires one step of
+generalisation. That step is small, and the resulting statement is hard to
+disagree with, but it is still an interpretation.
+
+If the owner rejects it, the correct home is a new open decision rather than a
+sentence in a frozen document. It is recorded here as derived rather than decided.
+
+Everything else in the table above is **OPEN** and belongs to the owner. It is not
+decided here because each option produces a materially different client: read-only
+caching, caching with write-back, and no caching at all are three different
+products, and choosing between them is a product decision rather than a
+documentation detail.
 
 ---
 

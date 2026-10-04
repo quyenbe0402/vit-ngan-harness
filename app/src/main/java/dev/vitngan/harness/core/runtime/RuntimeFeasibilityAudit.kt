@@ -70,13 +70,25 @@ object HermesRuntimeRequirements {
  * - Termux is FEASIBLE: it ships Python 3.14.6 aarch64 (satisfying the floor
  *   and every gated dep) and Node 26.4.0 aarch64 (matching `.nvmrc`), and
  *   upstream declares Android/Termux as a supported target.
- * - Embedded Python / Chaquopy is NOT FEASIBLE *for this revision*: no
- *   Android CPython reaches 3.14, and the required native packages publish
- *   zero Android wheels at the pinned versions.
+ * - Embedded Python / Chaquopy is NOT SELECTED.
  *
- * The embedded candidate is rejected, not deleted: if upstream ever relaxes
- * its Python floor, the `HermesRuntime` abstraction stays valid and the
- * decision can be revisited on evidence.
+ * CORRECTION (2026-10-04): this block previously read "Embedded Python /
+ * Chaquopy is NOT FEASIBLE *for this revision*: no Android CPython reaches
+ * 3.14". That was the M0-007 conclusion and it was **wrong**. M0-008L-G/M/O
+ * subsequently built CPython 3.14 for Android arm64 and executed five Hermes
+ * native dependencies on the physical device. The original verdict text is
+ * preserved verbatim in docs/M0-007_RUNTIME_FEASIBILITY_AUDIT.md; history is
+ * not rewritten.
+ *
+ * What survives is the narrower and still-true statement: embedded Python is
+ * not the *selected* runtime, by product decision
+ * (docs/PIVOT-DECISION.md). The enum constant `NOT_FEASIBLE` is retained under
+ * that meaning; renaming it is an owner decision with test blast radius, tracked
+ * as finding F-03 in docs/PIVOT_EXECUTION_AUDIT.md.
+ *
+ * The candidate is parked, not deleted: the built work is preserved as Version-B
+ * (OD-004), and if that trigger ever fires the `HermesRuntime` abstraction stands
+ * and the decision can be revisited on evidence.
  */
 object RuntimeFeasibilityAudit {
 
@@ -98,17 +110,45 @@ object RuntimeFeasibilityAudit {
         FeasibilityFinding(
             candidate = RuntimeCandidate.EMBEDDED_PYTHON,
             verdict = Feasibility.NOT_FEASIBLE,
-            reason = "No Android CPython runtime reaches 3.14, so the 45 gated core " +
-                "dependencies - including the LLM client and HTTP stack - would not be " +
-                "installed at all; the pinned native packages also publish zero Android " +
-                "wheels, and Hermes' subprocess-heavy design cannot work inside the app " +
-                "sandbox under SELinux. This is a property of the audited revision, not " +
-                "of Python.",
+            // The verdict below is NOT_SELECTED, and it is retained deliberately:
+            // renaming it has test blast radius and is an owner decision
+            // (see docs/PIVOT_EXECUTION_AUDIT.md, finding F-03).
+            //
+            // This reason string was WRONG and was corrected on 2026-10-04.
+            // It previously claimed no Android CPython reaches 3.14 and that the
+            // required native packages publish zero Android wheels. Both claims
+            // were disproven by device evidence: M0-008L-G/M/O built and executed
+            // pydantic-core, cffi, cryptography, httptools and jiter for Android
+            // arm64 on CPython 3.14 with full artifact identity.
+            //
+            // What remains true is narrower: embedded Python is not the selected
+            // runtime. See docs/PIVOT-DECISION.md. The historical verdict text is
+            // preserved in docs/M0-007_RUNTIME_FEASIBILITY_AUDIT.md.
+            reason = "Not selected. The project pivoted to remote Hermes execution " +
+                "(docs/PIVOT-DECISION.md). Technical feasibility was separately " +
+                "demonstrated by M0-008L-G/M/O: CPython 3.14 for Android arm64 was " +
+                "built and five Hermes native dependencies were executed on the " +
+                "physical device. This candidate is unsupported by product decision, " +
+                "not by a technical blocker.",
             evidence = listOf(
+                "docs/PIVOT-DECISION.md: remote Hermes is the default architecture",
+                "M0-008L-G/M/O: pydantic-core, cffi, cryptography, httptools, jiter " +
+                    "built and executed on device (Redmi 24069RA21C, Android 16)",
                 "PyPI: android wheel count is 0 for cryptography, numpy, Pillow, " +
                     "sentencepiece, soundfile, brotlicffi, psutil, faster-whisper at the pins",
                 "psutil is marked sys_platform != 'android' upstream",
                 "uvloop omitted from [termux] because libuv configure fails on Android",
+                // RESTORED 2026-10-04 after review. This item was removed during the
+                // first correction pass because it read as supporting the old
+                // "technically blocked" framing. That removal was unjustified and is
+                // recorded here rather than left silent.
+                //
+                // The fact is unchanged and remains true: device b36d068a runs
+                // SELinux Enforcing. It is simply no longer evidence FOR the verdict
+                // above, because the verdict no longer rests on a SELinux block. An
+                // audit that removes inconvenient evidence while softening the
+                // conclusion it supported is the shape of error this project has
+                // already committed once (the orjson dependency audit).
                 "device b36d068a: SELinux Enforcing",
             ),
         ),

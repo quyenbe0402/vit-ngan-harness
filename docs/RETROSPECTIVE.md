@@ -62,11 +62,25 @@ one rather than re-reading the source.
 **This was not wasted work, and the embedded path did not fail.**
 
 The five packages above are genuine, reusable infrastructure, proven with a
-build-to-device SHA identity chain. The technical feasibility of running Hermes
-natively on Android arm64 is **established**, not disproven. Any account of this
-period that says the embedded approach "failed", "did not work", or "was proven
-impossible" is false and is contradicted by the device evidence in the milestone
-documents.
+build-to-device SHA identity chain. Technical feasibility of that specific slice
+- building these native wheels for Android arm64 CPython 3.14 and running them -
+is **demonstrated**, not disproven. Any account of this period saying the embedded
+approach "failed", "did not work", or "was proven impossible" is false.
+
+**Scope of that claim, stated precisely.** It is deliberately narrow. What the
+M0 work demonstrates is that *these native packages* build and execute on the
+device. It is **not** a demonstration that Hermes itself runs on Android, and it
+does **not** overturn every premise of the original M0-007 verdict:
+
+- It does not re-test the 45-gated-dependency availability question as a whole.
+- It does not re-test the wheel-availability question for the packages that were
+  never attempted (Pillow, PyNaCl, watchfiles, pillow-heif, resvg-py).
+- It does not test the `subprocess` / process-spawn behaviour under SELinux. No
+  Hermes process was ever started on device.
+
+Those are separate questions with separate answers, and this retrospective does
+not claim to have answered them. The full M0-007 verdict text is preserved
+verbatim in `docs/M0-007_RUNTIME_FEASIBILITY_AUDIT.md`.
 
 What changed is not that the embedded path failed. It is that the embedded path
 is **no longer the default**, for reasons recorded in `PIVOT-DECISION.md` rather

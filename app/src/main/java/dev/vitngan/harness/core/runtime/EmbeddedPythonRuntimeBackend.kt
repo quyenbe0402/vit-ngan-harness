@@ -1,7 +1,7 @@
 package dev.vitngan.harness.core.runtime
 
 /**
- * Embedded CPython runtime - **UNSUPPORTED experimental stub**.
+ * Embedded CPython runtime - **UNSUPPORTED by product decision**.
  *
  * This backend is declared so the capability is visible and so callers get an
  * explicit UNSUPPORTED health rather than a confusing failure later.
@@ -11,17 +11,33 @@ package dev.vitngan.harness.core.runtime
  *  - package a native Python runtime
  *  - start an interpreter
  *
- * Embedding CPython on Android is not viable: the interpreter is not provided
- * by the NDK, shipping it is not legally or reliably possible, and it would
- * bypass the Termux model this project has adopted. Declaring it as
- * unsupported is the honest outcome, not a gap to be filled later.
+ * CORRECTION (2026-10-04): the KDoc here previously read "Embedding CPython on
+ * Android is not viable: the interpreter is not provided by the NDK, shipping it
+ * is not legally or reliably possible..." That was **false**. M0-008L-G/M/O built
+ * CPython 3.14 for Android arm64 and executed five Hermes native dependencies on
+ * the physical device. The accurate statement is that embedded CPython is
+ * **technically achievable and was demonstrated**, but is not the selected
+ * runtime because the project pivoted to remote Hermes
+ * (docs/PIVOT-DECISION.md).
+ *
+ * The class itself remains a stub: `isSupported()` returns false and no process
+ * is started. That is now a product decision rather than a technical limitation,
+ * and the distinction is recorded because a reader who assumes it is a technical
+ * limitation will draw the wrong conclusion about Version-B.
  */
 @ExperimentalM0Runtime
 class EmbeddedPythonRuntimeBackend : HermesRuntime {
 
     override val name: String = "embedded-python"
 
-    private val reason = "embedded CPython is not supported on Android"
+    // User-facing diagnostic. Corrected 2026-10-04: the previous text
+    // ("embedded CPython is not supported on Android") asserted a technical
+    // impossibility that M0-008L-G/M/O disproved. The accurate statement is
+    // that it is not the selected runtime.
+    private val reason =
+        "embedded CPython is not the selected runtime; see docs/PIVOT-DECISION.md. " +
+            "It was built and proven on-device during M0-008L-G/M/O and is preserved " +
+            "as Version-B, so this is a product decision rather than a limitation."
 
     /** Why this backend is unsupported. Safe to surface in diagnostics. */
     fun unsupportedReason(): String = reason
