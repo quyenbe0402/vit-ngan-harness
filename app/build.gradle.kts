@@ -67,12 +67,19 @@ dependencies {
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.javadiff)
 
+    // M21 Phase A: the first and only network dependency. See the version
+    // rationale in gradle/libs.versions.toml before changing the pin.
+    implementation(libs.okhttp)
+
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.lifecycle.runtime.compose)
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.androidx.arch.core.testing)
+    // Real loopback sockets for wire-level WebSocket transport tests. The
+    // in-process protocol mock cannot verify the WS handshake or close codes.
+    testImplementation(libs.mockwebserver)
     debugImplementation(libs.androidx.ui.test.manifest)
     androidTestImplementation(libs.androidx.test.runner)
     androidTestImplementation(libs.androidx.test.ext.junit)

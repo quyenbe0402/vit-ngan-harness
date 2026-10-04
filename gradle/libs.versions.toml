@@ -13,6 +13,7 @@ kotlinx-serialization-plugin = "2.0.21"
 java-diff-utils = "4.12"
 coroutines = "1.8.1"
 desugar = "2.1.4"
+okhttp = "4.12.0"
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
@@ -52,3 +53,19 @@ androidx-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit
 androidx-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest", version = "1.7.6" }
 androidx-test-runner = { group = "androidx.test", name = "runner", version = "1.6.2" }
 androidx-test-ext-junit = { group = "androidx.test.ext", name = "junit", version = "1.2.1" }
+
+# M21 Phase A: the only network stack in the app.
+#
+# Version choice is DELIBERATE, not "latest". 4.12.0 is the final release of the
+# now-superseded 4.x line; the 5.x line exists. We pin 4.x because WebSocket
+# framing is long-stable code and the architecture is frozen - trading currency
+# for stability. Review this pin when the app next needs a current OkHttp.
+#
+# Platform TLS caveat: Android API 26-28 does not provide TLS 1.3, so OkHttp
+# will negotiate down to TLS 1.2 on those devices. The remote gateway's TLS
+# configuration must tolerate 1.2.
+okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
+
+# OkHttp's own test artifact: opens real loopback sockets, used to verify the
+# WebSocket transport at the wire level that the in-process mock cannot.
+mockwebserver = { group = "com.squareup.okhttp3", name = "mockwebserver", version.ref = "okhttp" }

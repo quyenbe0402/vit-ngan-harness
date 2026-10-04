@@ -18,6 +18,28 @@
     -->
     <uses-permission android:name="com.termux.permission.RUN_COMMAND" />
 
+    <!--
+      M21 Phase A: the app now holds real network reachability.
+
+      INTERNET is required by the frozen pivot (docs/PIVOT-DECISION.md): the
+      Hermes gateway runs on a remote host and the app is a thin wss:// client.
+      There is no variant of the pivot that avoids this permission.
+
+      It is declared unconditionally rather than in a debug manifest on
+      purpose: a debug-only permission produces a release build that fails with
+      a SocketTimeoutException in the field rather than at the desk.
+
+      ACCESS_NETWORK_STATE is required in addition to INTERNET, because
+      ConnectivityManager.registerDefaultNetworkCallback - which the reconnect
+      supervisor uses to detect the network returning - throws
+      SecurityException at runtime without it. Omitting it would not fail at
+      build time.
+
+      This supersedes finding F-01 in docs/PIVOT_EXECUTION_AUDIT.md.
+    -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
     <application
         android:name=".HarnessApplication"
         android:allowBackup="false"
